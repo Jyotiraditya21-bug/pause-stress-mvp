@@ -3,3 +3,5 @@ cache/
 results/
 __pycache__/
 *.pyc
+
+.hf-smoke-venv/

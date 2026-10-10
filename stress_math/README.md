@@ -9,7 +9,7 @@ Use Python **3.11 or 3.12** (MediaPipe 0.10.21 supports the legacy Face Mesh API
 ```sh
 cd /path/to/unzipped-folder-or-repository
 python3.12 -m venv stress_math/.venv
-stress_math/.venv/bin/python -m pip install -r stress_math/requirements.txt
+stress_math/.venv/bin/python -m pip install -r stress_math/requirements-core.txt
 stress_math/.venv/bin/python -m unittest stress_math.test_math -v
 stress_math/.venv/bin/python -m stress_math.evaluate --dataset ubfc_phys --root /path/to/UBFC-Phys
 stress_math/.venv/bin/python -m stress_math.evaluate --manifest /path/to/sessions.csv
@@ -59,3 +59,32 @@ Efficiency per method includes the shared extraction/feature pass plus that meth
 **OLD limitation:** `frontend/src/scanMetrics.js` reports scan quality and mean coefficients; it does not assign video stress scores. `old_adapter.score_video` therefore returns missing scores on the same extracted frame timeline. The adapter still reports "OLD has no video scorer"; primary comparisons now use NEW versus fixed feature baselines. No questionnaire self-report is substituted for OLD predictions. This limitation is recorded in every report.
 
 Speech/smile gating can suppress much of T2; inspect coverage. Accuracy on task labels would not establish accuracy at measuring a person's stress. Camera operation and real dataset performance require real recordings and are not established by synthetic unit tests. This Python experiment does not run on GitHub Pages.
+
+## Optional third-party pretrained comparators
+
+Install the optional full requirements only when using pretrained inference:
+
+```sh
+stress_math/.venv/bin/python -m pip install -r stress_math/requirements.txt
+stress_math/.venv/bin/python -m stress_math.evaluate --hf-models --dataset ubfc_phys --root /path/to/UBFC-Phys --output stress_math/results/hf
+stress_math/.venv/bin/python -m stress_math.evaluate --hf-models --manifest /path/to/sessions.csv --hf-batch-size 8 --output stress_math/results/hf
+stress_math/.venv/bin/python -m stress_math.hf_models --smoke-test --model A
+stress_math/.venv/bin/python -m stress_math.hf_models --smoke-test --model B
+stress_math/.venv/bin/python -m unittest stress_math.test_math stress_math.test_hf -v
+```
+
+The standard evaluator and core tests still work without torch, transformers or huggingface_hub. They are lazy imports in the optional inference module. Existing APIs and CLI commands are retained; `--hf-models` selects the additional protocol. `--hf-cache` sets the model-artifact directory; score caches live under the usual cache/hf_scores directory. `--hf-revision-a` and `--hf-revision-b` accept exact commits or refs; the resolved immutable hash is recorded and used for every model/processor download.
+
+Models: A = TheBgGirl/fer-stress-vit, softmax P(stressed); B = HardlyHumans/Facial-expression-detection, softmax P(anger)+P(fear)+P(sad)+P(disgust). Indices are read from the loaded config.id2label, matched case-insensitively; missing/ambiguous labels fail explicitly. RGB crops use the MediaPipe face box plus 15% margin on each side. Sampling uses the first decoded frame per 200ms bucket (at most 5fps). AutoImageProcessor preprocessing, fp32 batch inference, eval mode, torch.no_grad(), MPS if available else CPU. Missing pretrained prediction weights are rejected rather than randomly initialized.
+
+Compare M0 existing math S; M1/M2 100*sigmoid of each pretrained probability's personal rest-baseline z; M3 = 100*sigmoid(mean(z_M0,z_M1,z_M2)); M4/M5 use the corresponding two z values. Scalar z_M0 for fusion is calibrated against math S during rest. Every scalar normalization uses max(raw sigma, .05*abs(mu)+.001) and clips z to [-3,3]. All weights are equal, fixed in code; no training or label-based tuning occurs.
+
+All methods use the same sampled frames, windows and complete-case intersection after pose and speaking/smiling gates. Rest calibration uses the shared first 25 seconds. Missing predictions/insufficient baselines or common coverage below 40% exclude the video from every comparison. Per-component coverage before intersection is recorded so the cause is visible. This is deliberately more restrictive than the math-only cohort; compare M0 with others **within this optional report**, not with the earlier full-frame report on a potentially different cohort.
+
+Each method has AUC/paired d_z/Wilcoxon subject-bootstrap CIs, coverage, ms per 5fps comparison sample, learned parameter count, and its own 1000 within-subject label permutations. Paired subject-bootstrap AUC differences vs M0 and descriptive Spearman agreement between session means of M0/M1/M2 are included. Counts exclude the shared MediaPipe detector. Timings compose the shared extraction/feature pass with relevant model crop/decode/inference and scoring costs; one-time loading and baseline calibration are excluded. Cached timings refer to their original inference run. AUC-difference bootstrap p-values are approximate and centred under the null.
+
+Model names, resolved revision hashes, full repository license text when present, otherwise published license declarations or null, are recorded in metrics.json. Model A's card does not document training data/participant splits sufficiently to exclude train/test overlap with UBFC-Phys. Model B predicts emotions; emotion probabilities are not stress measurements. These are third-party pretrained weights, not trained by us. No model-card benchmark number is presented as this app's accuracy.
+
+Weights total roughly 687 MB for the two fp32 ViTs, in addition to Python libraries/caches and dataset storage. Use a cache on a disk with enough space. Local videos/crops are never uploaded for inference. The dummy-image smoke CLI downloads real pretrained weights; the unit dummy-image test uses a fixed test-only classifier with the real AutoImageProcessor and torch, and does not establish pretrained accuracy.
+
+This optional Python comparator path is not included in the browser live score or executed on GitHub Pages.

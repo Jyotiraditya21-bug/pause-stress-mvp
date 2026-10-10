@@ -177,6 +177,9 @@ OLD has no video scorer. The adapter remains available, but OLD-vs-NEW is no lon
     (out/'report.md').write_text(report)
 
 def run(args):
+    if getattr(args,'hf_models',False):
+        from .hf_evaluate import run as run_pretrained
+        return run_pretrained(args)
     np.random.seed(42)
     if args.live:
         from .live import record
@@ -269,5 +272,10 @@ def main():
     p=argparse.ArgumentParser(description='Test-only experimental facial index. Never trains or tunes.')
     p.add_argument('--dataset',choices=['ubfc_phys']); p.add_argument('--root'); p.add_argument('--manifest')
     p.add_argument('--live',action='store_true'); p.add_argument('--output',default='stress_math/results'); p.add_argument('--cache',default='stress_math/cache')
+    p.add_argument('--hf-models',action='store_true',help='Optional fixed pretrained comparators; never trains')
+    p.add_argument('--hf-cache',help='Local directory for downloaded model artifacts')
+    p.add_argument('--hf-batch-size',type=int,default=8)
+    p.add_argument('--hf-revision-a',help='Optional model A revision; resolved to immutable hash')
+    p.add_argument('--hf-revision-b',help='Optional model B revision; resolved to immutable hash')
     run(p.parse_args())
 if __name__=='__main__': main()

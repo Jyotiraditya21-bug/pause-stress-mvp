@@ -107,3 +107,38 @@ def au_validity(rows,path):
             r=pearsonr(a,b); result[au]={'r':float(r.statistic),'p':float(r.pvalue),'n':len(a),'direction':'negative expected for AU12 (downward-corner feature)' if au=='AU12' else 'positive expected'}
         else: result[au]={'status':'insufficient aligned variable data'}
     return result
+
+
+def paired_method_auc_difference(records,method,baseline='M0'):
+    """Paired, intact-subject bootstrap difference; no changing comparison cohort."""
+    usable=[r for r in records if not r.get('excluded',False)]
+    if any(not np.isfinite(r['methods'].get(k,np.nan)) for r in usable for k in (method,baseline)):
+        return {'status':'unavailable: missing paired score on fixed cohort'}
+    if not usable: return {'status':'unavailable: no paired eligible videos'}
+    y=np.array([r['label'] for r in usable]); a=np.array([r['methods'][method] for r in usable]); b=np.array([r['methods'][baseline] for r in usable])
+    observed_a=auc_value(y,a); observed_b=auc_value(y,b)
+    if observed_a is None: return {'status':'unavailable: two classes required'}
+    subjects=sorted({str(r['subject_id']) for r in usable}); indices={s:np.array([i for i,r in enumerate(usable) if str(r['subject_id'])==s]) for s in subjects}
+    rng=np.random.default_rng(42); draws=[]
+    for _ in range(1000):
+        idx=np.concatenate([indices[s] for s in rng.choice(subjects,len(subjects),replace=True)])
+        aa=auc_value(y[idx],a[idx]); bb=auc_value(y[idx],b[idx])
+        if aa is not None: draws.append(aa-bb)
+    observed=observed_a-observed_b
+    # Centred bootstrap distribution approximates the null difference of zero.
+    centered=np.asarray(draws)-observed
+    p=float((1+np.sum(abs(centered)>=abs(observed)))/(1+len(draws))) if draws else None
+    return {'method':method,'baseline':baseline,'auc_difference':observed,
+            'subject_bootstrap_95ci':np.percentile(draws,[2.5,97.5]).tolist() if draws else None,
+            'p_value_two_sided_centered_bootstrap':p,'valid_resamples':len(draws),'seed':42}
+
+
+def method_correlations(records,methods=('M0','M1','M2')):
+    result={}
+    for i,a in enumerate(methods):
+        for b in methods[i+1:]:
+            usable=[r for r in records if not r.get('excluded',False) and np.isfinite(r['methods'].get(a,np.nan)) and np.isfinite(r['methods'].get(b,np.nan))]
+            x=[r['methods'][a] for r in usable]; y=[r['methods'][b] for r in usable]
+            result[f'{a}_vs_{b}']={'spearman_r':float(spearmanr(x,y).statistic) if len(x)>2 and np.std(x)>0 and np.std(y)>0 else None,
+                                  'n_sessions':len(x),'unit':'paired session means; descriptive agreement, no independent-frame p-value'}
+    return result
