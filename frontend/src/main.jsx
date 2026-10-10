@@ -1,60 +1,52 @@
-import {api, browserOnly} from './api';
-import React, {useEffect, useState} from 'react';
+import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import './style.css';
 import CameraScan from './CameraScan';
-import Questionnaire from './Questionnaire';
-import Guidance from './Guidance';
-import TrendChart from './TrendChart';
+import LiveGraph from './LiveGraph';
 import Experiment from './Experiment';
+import {readCameraSessions,saveCameraSession,deleteCameraSession} from './cameraSessions';
 
 function App() {
-  const [step, setStep] = useState('camera');
-  const [result, setResult] = useState(null);
-  const [deleting, setDeleting] = useState(null);
-  const [historyError, setHistoryError] = useState('');
-  const [scan, setScan] = useState(null);
-  const [screen, setScreen] = useState('Overview');
-  const [health, setHealth] = useState(null);
-  const [sessions, setSessions] = useState([]);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState('');
-  async function load() {
-    setLoading(true); setError('');
-    await Promise.all(['/api/health', '/api/sessions'].map(async url => {
-      const response = await api(url);
-      if (!response.ok) throw new Error('Backend unavailable');
-      return response.json();
-    })).then(([status, history]) => {setHealth(status); setSessions(history.sessions);})
-      .catch(() => setError('Cannot connect to the backend. Start FastAPI on port 8000.'))
-      .finally(()=>setLoading(false));
+  const [screen,setScreen]=useState('Overview'),[result,setResult]=useState(null);
+  const [storageConsent,setStorageConsent]=useState(false),[notice,setNotice]=useState('');
+  const [error,setError]=useState('');
+  const [sessions,setSessions]=useState(()=>{try{return readCameraSessions();}catch{return[];}});
+  function navigate(next){setNotice('');setError('');setScreen(next);}
+  function completed(session){setResult(session);setStorageConsent(false);setScreen('Results');setNotice('Session finished. Camera stopped.');}
+  function save(){
+    if(!result||!storageConsent)return;
+    try{saveCameraSession(result);setSessions(readCameraSessions());setNotice('Graph and summary saved in this browser.');setError('');}
+    catch{setError('Browser storage is unavailable or full. Your session is still shown here.');}
   }
-  useEffect(() => {load();}, []);
-  function saved(session) {setNotice('Check-in saved on this Mac.');setResult(session); setSessions(previous => [session, ...previous]); setScreen('Results'); setStep('camera'); setScan(null);}
-  async function remove(id) {
-    if (!window.confirm('Delete this saved check-in permanently?')) return;
-    setDeleting(id); setHistoryError('');
-    try {
-      const response=await api('/api/sessions/'+id,{method:'DELETE'});
-      if(!response.ok && response.status!==404) throw new Error('Could not delete. Please retry.');
-      setNotice('Check-in deleted.');
-      setSessions(previous=>previous.filter(item=>item.id!==id));
-      if(result?.id===id) setResult(null);
-    } catch(e) {setHistoryError(e.message);} finally {setDeleting(null);}
+  function remove(id){
+    if(!window.confirm('Delete this saved camera session permanently?'))return;
+    try{deleteCameraSession(id);setSessions(readCameraSessions());setNotice('Session deleted.');}
+    catch{setError('Could not delete this session. Please retry.');}
   }
-  const displayedScan = result?.camera_metrics;
+  const isSaved=result&&sessions.some(s=>s.id===result.id);
   return <div className="shell">
-    <header><a className="brand" href="#" onClick={() => setScreen('Overview')}>◉ pause<span>WELLBEING CHECK-IN</span></a><div className="tag">{browserOnly ? 'Browser demo' : 'Local MVP · Ready'}</div></header>
-    <nav aria-label="Main navigation">{['Overview', 'Check-in', 'Results', 'History', 'Experiment'].map(item => <button key={item} aria-current={screen === item ? 'page' : undefined} className={screen === item ? 'active' : ''} onClick={() => setScreen(item)}>{item}</button>)}</nav>
-    <main><p className="save-notice" role="status">{notice}</p>
-    {screen === 'Overview' && <><p className="eyebrow">A MOMENT FOR YOURSELF</p><h1>Pause. Check in.<br/><em>Understand your patterns.</em></h1><p className="intro">A private space to reflect on how you feel, explore experimental camera signals, and follow your wellbeing over time.</p><button className="primary" onClick={() => setScreen('Check-in')}>Explore your check-in →</button><div className="cards"><article><span>01 / REFLECT</span><h2>How are you feeling?</h2><p>A brief self-report gives your experience a voice.</p></article><article><span>02 / OBSERVE</span><h2>Explore camera signals</h2><p>Facial movement will be shown separately from your reported stress.</p></article><article><span>03 / ACT</span><h2>Find your next step</h2><p>Choose optional AI guidance or local suggestions after your check-in.</p></article></div></>}
-    {screen === 'Check-in' && <><p className="eyebrow">YOUR CHECK-IN</p><h1>Take a moment to pause.</h1>{step === 'camera' ? <><CameraScan onComplete={value=>{setScan(value);setStep('questionnaire');}}/><button className="secondary" onClick={()=>{setScan(null);setStep('questionnaire');}}>Skip camera · answer questions</button></> : <><Questionnaire scan={scan} onSaved={saved}/><button className="secondary" onClick={()=>{setScan(null);setStep('camera');}}>Back to camera</button></>}</>}
-    {screen === 'Results' && <><p className="eyebrow">CLEAR, SEPARATE RESULTS</p><h1>Evidence before estimates.</h1>{result && <p>Saved {new Date(result.created_at).toLocaleString()}</p>}<div className="cards"><article><h2>Reported stress</h2>{result ? <><p className="rating">{result.self_reported_stress}<small> / 10</small></p><p>Your rating, not an AI prediction.</p><p>Sleep: {result.context?.sleep_hours} hours<br/>Workload: {result.context?.workload ?? 'Not recorded'}<br/>Caffeine: {result.context?.caffeine == null ? 'Not recorded' : result.context.caffeine ? 'Yes' : 'No'}<br/>Recent exercise: {result.context?.recent_exercise == null ? 'Not recorded' : result.context.recent_exercise ? 'Yes' : 'No'}</p></> : <><p>No saved check-in selected.</p><button className="secondary" onClick={()=>setScreen('History')}>Choose from History</button></>}</article><article><h2>Camera signals</h2><p>{displayedScan ? `Scan quality: ${displayedScan.quality} · ${displayedScan.usablePercent}% usable frames` : 'No camera metrics in this check-in.'}</p>{displayedScan?.quality==='good' ? <><p>Mean blink coefficient: {displayedScan.meanBlinkCoefficient?.toFixed(3)}<br/>Mean brow coefficient: {displayedScan.meanBrowCoefficient?.toFixed(3)}<br/>Mean movement: {displayedScan.meanMovement?.toFixed(4)}</p><p>These coefficients are not stress scores.</p></> : displayedScan && <p>Poor-quality scan. Feature values are withheld.</p>}</article><article><Guidance key={result?.id || "empty"} session={result} onUpdate={updated=>{setResult(previous=>previous?.id===updated.id ? updated : previous);setSessions(previous=>previous.map(item=>item.id===updated.id ? updated : item));}}/></article></div><button className="primary" onClick={()=>{setStep('camera');setScan(null);setScreen('Check-in');}}>New check-in →</button></>}
-    {screen === 'History' && <><p className="eyebrow">YOUR PATTERNS</p><h1>A little perspective.</h1>{loading ? <p role="status">Loading your saved check-ins…</p> : error ? <p>History is unavailable until the backend reconnects.</p> : <TrendChart sessions={sessions}/>}<section className="panel"><h2>{sessions.length ? `${sessions.length} saved check-ins` : 'No check-ins yet'}</h2>{historyError && <p role="alert">{historyError}</p>}{sessions.map(item=><div className="history-row" key={item.id}><div><strong>{item.self_reported_stress} / 10 · reported stress</strong><p>{new Date(item.created_at).toLocaleString()} · Camera: {item.scan_quality}</p></div><div><button className="secondary" onClick={()=>{setResult(item);setScreen('Results');}}>View</button><button className="secondary" disabled={deleting===item.id} onClick={()=>remove(item.id)}>{deleting===item.id ? 'Deleting…' : 'Delete'}</button></div></div>)}{!sessions.length && !loading && !error && <><p>Your saved check-ins will appear here.</p><button className="primary" onClick={()=>setScreen('Check-in')}>Create your first check-in →</button></>}</section></>}
-    {screen === 'Experiment' && <Experiment/>}
-    <section className="status" aria-live="polite"><strong>System status</strong>{error ? <><p role="alert">{error}</p><button className="secondary" disabled={loading} onClick={load}>Reconnect</button></> : <p>{health ? `${browserOnly ? 'Browser storage ready' : 'Backend connected · SQLite ready'} · Gemini key ${health.gemini_configured ? 'configured' : 'not configured'}` : 'Connecting to local backend…'}</p>}</section>
-    </main><footer>Wellbeing exploration, not medical diagnosis. Camera processing stays in your browser. No video recording or AI stress prediction.</footer>
+    <header><a className="brand" href="#" onClick={()=>navigate('Overview')}>◉ pause<span>LIVE FACIAL CHECK-IN</span></a><div className="tag">Experimental · on-device</div></header>
+    <nav aria-label="Main navigation">{['Overview','Live','Results','History','Experiment'].map(item=><button key={item} aria-current={screen===item?'page':undefined} className={screen===item?'active':''} onClick={()=>navigate(item)}>{item}</button>)}</nav>
+    <main><p className="save-notice" role="status">{notice}</p>{error&&<p role="alert" className="camera-error">{error}</p>}
+      {screen==='Overview'&&<>
+        <p className="eyebrow">LIVE CAMERA · NO QUESTIONNAIRE SCORE</p><h1>Pause. Watch.<br/><em>Explore your facial patterns.</em></h1>
+        <p className="intro">A live camera graph powered by a fixed mathematical facial index. Calibrate while relaxed for 25 seconds, then follow changes on a 0–10 scale.</p>
+        <button className="primary" onClick={()=>navigate('Live')}>Start live camera graph →</button>
+        <div className="cards"><article><span>01 / CALIBRATE</span><h2>Your personal baseline</h2><p>Start relaxed, face the camera, and stay quiet for 25 seconds.</p></article><article><span>02 / FOLLOW</span><h2>A graph that updates live</h2><p>0 is the high-stress end; 10 is the no-stress end. Baseline maps to 5. The scale is an experimental proxy, not measured stress.</p></article><article><span>03 / REVIEW</span><h2>Keep your session private</h2><p>Review the graph and optionally save it in this browser. Video is never recorded or uploaded.</p></article></div>
+        <section className="status"><strong>What drives the graph?</strong><p>Blink events, brow and lip geometry, jaw geometry, and head-motion jitter relative to your baseline. Fixed weights and a sigma floor are used. Pulse/HRV is excluded. No entered stress rating drives the result.</p></section>
+      </>}
+      {screen==='Live'&&<><p className="eyebrow">REAL-TIME FACIAL BEHAVIOR</p><h1>Your live session.</h1><CameraScan onComplete={completed}/></>}
+      {screen==='Results'&&<><p className="eyebrow">SESSION REVIEW</p><h1>Your camera-derived graph.</h1>{result?<>
+        <p>{new Date(result.created_at).toLocaleString()} · {Math.round(result.durationSeconds)} seconds</p>
+        <div className="cards"><article><h2>Average index</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'—'}<small> / 10</small></p><p>Experimental facial index. No questionnaire rating is used.</p></article><article><h2>Last plotted reading</h2><p className="rating">{Number.isFinite(result.latest)?result.latest.toFixed(1):'—'}<small> / 10</small></p><p>0 = high-stress end · 10 = no-stress end. Baseline feature means = 5.</p></article><article><h2>Usable signal coverage</h2><p className="rating">{result.coveragePercent.toFixed(0)}<small>%</small></p><p>{result.quality==='good'?'At least 40% of post-calibration frames were usable.':'Below the fixed coverage minimum or no usable scores. Aggregate readings are withheld.'}</p></article></div>
+        <LiveGraph points={result.points}/>
+        <section className="panel"><h2>Save this graph?</h2><p>Only elapsed-time index samples and this summary are saved. Anyone using this browser profile can view them; clearing site data erases them.</p>{isSaved?<p>This session is saved.</p>:<><label className="consent"><input type="checkbox" checked={storageConsent} onChange={e=>setStorageConsent(e.target.checked)}/> I agree to save this graph and summary in this browser.</label><button className="primary" disabled={!storageConsent} onClick={save}>Save session</button></>}</section>
+        <button className="primary" onClick={()=>navigate('Live')}>Start another session →</button>
+      </>:<><p>Finish a live session or choose a saved graph from History.</p><button className="primary" onClick={()=>navigate('Live')}>Open live camera</button></>}</>}
+      {screen==='History'&&<><p className="eyebrow">SAVED CAMERA SESSIONS</p><h1>Your previous graphs.</h1><section className="panel"><h2>{sessions.length?sessions.length+' saved sessions':'No camera sessions saved yet'}</h2>{sessions.map(s=><div className="history-row" key={s.id}><div><strong>{Number.isFinite(s.average)?s.average.toFixed(1)+'/10 · average experimental index':'Insufficient signal coverage'}</strong><p>{new Date(s.created_at).toLocaleString()} · {s.coveragePercent.toFixed(0)}% coverage</p></div><div><button className="secondary" onClick={()=>{setResult(s);navigate('Results');}}>View graph</button><button className="secondary" onClick={()=>remove(s.id)}>Delete</button></div></div>)}{!sessions.length&&<button className="primary" onClick={()=>navigate('Live')}>Start a live session</button>}</section></>}
+      {screen==='Experiment'&&<Experiment/>}
+    </main>
+    <footer>Experimental facial behavior index, not a diagnosis or validated stress measurement. Camera processing stays in your browser. No video recording or upload.</footer>
   </div>;
 }
 createRoot(document.getElementById('root')).render(<App/>);

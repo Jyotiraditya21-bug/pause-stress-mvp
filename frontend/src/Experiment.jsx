@@ -7,7 +7,7 @@ export default function Experiment() {
     <p className="intro">Explore a training-free facial behavior index with live camera or offline video on your computer. This experimental index has not been validated as a measurement of personal stress.</p>
     <section className="panel">
       <h2>Run the experiment locally</h2>
-      <p>GitHub Pages hosts this browser demo. The separate Python experiment requires Python 3.11 or 3.12 and runs locally; this page does not execute it.</p>
+      <p>The Live tab runs a pulse-free version of the fixed index in your browser. The separate Python evaluator requires Python 3.11 or 3.12 and runs locally; this page does not execute Python.</p>
       <p><a className="primary" href={`${import.meta.env.BASE_URL}experiment/stress_math.zip`} download>Download experiment code</a></p>
       <p><a href={repository} target="_blank" rel="noreferrer">View code and full run instructions on GitHub ↗</a></p>
       <p><a href={`${import.meta.env.BASE_URL}experiment/README.md`}>Read the experiment guide</a></p>
@@ -19,6 +19,6 @@ export default function Experiment() {
       <article><h2>Compare the evidence</h2><p>Compare each feature alone, the index without pulse features, and all available features. Evaluate AUC, paired differences and subject-bootstrap intervals, plus 1,000 label permutations.</p></article>
       <article><h2>Check signal coverage</h2><p>Exclude videos with less than 40% usable frames after pose and speaking/smiling checks. Reports show coverage, exclusions and processing time.</p></article>
     </div>
-    <section className="panel"><h2>Current verification</h2><p>Nine synthetic tests passed. Real webcam sessions and public-dataset performance remain unverified. The existing browser check-in has no video stress scorer, so it is not used as a predictive baseline.</p><p>The experimental 0–100 index is not a percentage of stress. A value of 50 corresponds to baseline feature means; its threshold is not clinically validated.</p></section>
+    <section className="panel"><h2>Current verification</h2><p>Nine synthetic tests passed. Real webcam sessions and public-dataset performance remain unverified. The live browser graph now uses the experimental facial index without pulse/HRV. It has no real-dataset accuracy results. The legacy questionnaire flow is not a predictive baseline.</p><p>The experimental 0–100 index is not a percentage of stress. A value of 50 corresponds to baseline feature means; its threshold is not clinically validated.</p></section>
   </>;
 }
