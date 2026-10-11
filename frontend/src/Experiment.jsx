@@ -1,3 +1,5 @@
+import React from 'react';
+
 const repository = 'https://github.com/Jyotiraditya21-bug/pause-stress-mvp/tree/main/stress_math';
 
 export default function Experiment() {
