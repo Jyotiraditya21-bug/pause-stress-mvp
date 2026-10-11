@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test": "node --test src/liveIndex.test.js"
+    "test": "node --test src/*.test.js"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.1.0",

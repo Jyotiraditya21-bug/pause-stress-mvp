@@ -3,6 +3,7 @@ import {FaceLandmarker,FilesetResolver} from '@mediapipe/tasks-vision';
 import {assessFrame} from './scanMetrics';
 import {LiveIndex,headPose,BASELINE_SECONDS} from './liveIndex';
 import LiveGraph from './LiveGraph';
+import {awaitResource} from './resourceWait';
 
 const MAX_SECONDS=300;
 export default function CameraScan({onComplete}) {
@@ -10,6 +11,7 @@ export default function CameraScan({onComplete}) {
   const [error,setError]=useState(''),[feedback,setFeedback]=useState('');
   const [seconds,setSeconds]=useState(0),[good,setGood]=useState(false);
   const [points,setPoints]=useState([]),[reading,setReading]=useState(null),[phase,setPhase]=useState('baseline');
+  const [perf,setPerf]=useState(null);
   const video=useRef(null),overlay=useRef(null),runtime=useRef({}),mounted=useRef(true);
   function stop() {
     const r=runtime.current;cancelAnimationFrame(r.frame);
@@ -19,7 +21,7 @@ export default function CameraScan({onComplete}) {
   }
   useEffect(()=>{
     mounted.current=true;
-    const hide=()=>{if(document.hidden){stop();setState('idle');setReading(null);setGood(false);setError('Camera stopped because this page was hidden. Start again to recalibrate.');}};
+    const hide=()=>{if(document.hidden&&(runtime.current.starting||runtime.current.stream)){stop();setState('idle');setReading(null);setGood(false);setError('Camera stopped because this page was hidden. Start again to recalibrate.');}};
     document.addEventListener('visibilitychange',hide);
     return()=>{mounted.current=false;document.removeEventListener('visibilitychange',hide);stop();};
   },[]);
@@ -34,27 +36,28 @@ export default function CameraScan({onComplete}) {
       points:r.scan.points,coveragePercent:coverage,frames:r.scan.total,validFrames:r.scan.valid,
       durationSeconds:duration,quality:coverage>=40&&scores.length?'good':'poor',
       average:coverage>=40&&scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:null,
-      latest:coverage>=40&&Number.isFinite(finalPoint?.value)?finalPoint.value:null};
+      latest:coverage>=40&&Number.isFinite(finalPoint?.value)?finalPoint.value:null,
+      performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(duration,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
     stop();setState('done');setReading(null);onComplete(summary);
   }
   async function start() {
     stop();setError('');setPoints([]);setReading(null);setSeconds(0);setState('loading');setGood(false);
-    const r=runtime.current;
+    const r=runtime.current;r.starting=true;const isCurrent=()=>mounted.current&&runtime.current===r;
     try {
       if(!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access requires HTTPS or localhost and a supported browser.');
-      r.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});
+      r.stream=await awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(t=>t.stop()),message:'Camera permission is still pending. Allow camera access, then retry.'});
       if(!mounted.current||runtime.current!==r){r.stream.getTracks().forEach(t=>t.stop());return;}
       r.stream.getVideoTracks().forEach(track=>track.addEventListener('ended',()=>{
         if(mounted.current&&runtime.current===r){stop();setState('idle');setReading(null);setError('Camera disconnected. Reconnect it and start again.');}
       }));
       video.current.srcObject=r.stream;await video.current.play();
       if(!mounted.current||runtime.current!==r) return;
-      const files=await FilesetResolver.forVisionTasks(`${import.meta.env.BASE_URL}mediapipe/wasm`);
+      const files=await awaitResource(FilesetResolver.forVisionTasks(`${import.meta.env.BASE_URL}mediapipe/wasm`),{isCurrent,message:'Facial analysis files took too long to load. Check your connection and retry.'});
       if(!mounted.current||runtime.current!==r) return;
-      r.model=await FaceLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`,delegate:'CPU'},runningMode:'VIDEO',numFaces:2,outputFacialTransformationMatrixes:true});
+      r.model=await awaitResource(FaceLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`,delegate:'CPU'},runningMode:'VIDEO',numFaces:2,outputFacialTransformationMatrixes:true}),{isCurrent,dispose:model=>model.close(),message:'Facial analysis initialization timed out. Please retry.'});
       if(!mounted.current||runtime.current!==r){r.model.close();return;}
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
-      r.lastVideoTime=-1;r.lastRun=0;setState('ready');tick();
+      r.lastVideoTime=-1;r.lastRun=0;r.starting=false;setState('ready');tick();
     } catch(e) {
       if(!mounted.current||runtime.current!==r) return;
       stop();setState('idle');
@@ -77,7 +80,9 @@ export default function CameraScan({onComplete}) {
     if(v.readyState>=2&&v.currentTime!==r.lastVideoTime&&now-r.lastRun>=100) {
       r.lastRun=now;r.lastVideoTime=v.currentTime;
       try {
+        const processingStart=performance.now();
         const result=r.model.detectForVideo(v,now);
+        const inferenceMs=performance.now()-processingStart;
         const ctx=r.sampleCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,64,48);
         const pixels=ctx.getImageData(0,0,64,48).data;
         let brightness=0;for(let i=0;i<pixels.length;i+=4)brightness+=(pixels[i]+pixels[i+1]+pixels[i+2])/3;
@@ -106,10 +111,12 @@ export default function CameraScan({onComplete}) {
           // One representative sample per second; rejected seconds remain explicit gaps.
           if(elapsed-r.scan.lastPlot>=1) {
             r.scan.points.push({time:elapsed,value:observation.value});r.scan.lastPlot=elapsed;
+            setPerf({fps:(r.scan.allFrames+1)/Math.max(elapsed,1),inferenceMs:inferenceMs});
             setPoints([...r.scan.points]);
           } else if(observation.phase==='live'&&!observation.valid&&r.scan.points.length&&Number.isFinite(r.scan.points.at(-1).value)) {
             r.scan.points.push({time:elapsed,value:null});r.scan.lastPlot=elapsed;setPoints([...r.scan.points]);
           }
+          r.scan.allFrames++;r.scan.inferenceSum+=inferenceMs;r.scan.processingSum+=performance.now()-processingStart;
         }
       } catch {stop();setState('idle');setReading(null);setError('Facial analysis stopped unexpectedly. Please retry.');return;}
     }
@@ -117,8 +124,8 @@ export default function CameraScan({onComplete}) {
   }
   function begin() {
     const r=runtime.current;if(!r.good)return;
-    r.scan={start:performance.now(),index:new LiveIndex(),points:[],lastPlot:-1,total:0,valid:0};
-    setSeconds(0);setPoints([]);setReading(null);setPhase('baseline');setState('scanning');
+    r.scan={start:performance.now(),index:new LiveIndex(),points:[],lastPlot:-1,total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0};
+    setSeconds(0);setPoints([]);setReading(null);setPhase('baseline');setPerf(null);setState('scanning');
   }
   const active=['loading','ready','scanning'].includes(state);
   return <>
@@ -136,6 +143,7 @@ export default function CameraScan({onComplete}) {
         <p>0 = high stress<br/>10 = no stress</p>
         <p className="fine">Experimental scale labels. This is a facial behavior proxy, not a verified measurement of stress. Your personal baseline maps to 5/10.</p>
       </div></div>
+      {state==='scanning'&&perf&&<p className="fine">Processing: {perf.fps.toFixed(1)} frames/s · Latest landmark inference: {perf.inferenceMs.toFixed(1)} ms/frame. Sampling is capped at 10 Hz.</p>}
       {error&&<p role="alert" className="camera-error">{error}</p>}
       {state==='scanning'&&<p>{seconds}s elapsed · Session ends at {MAX_SECONDS}s. {phase==='baseline'?'Stay relaxed and avoid speaking during calibration.':'Speaking, smiling and poor framing pause readings.'}</p>}
       {!active&&<button className="primary" disabled={!consent} onClick={start}>Enable camera</button>}

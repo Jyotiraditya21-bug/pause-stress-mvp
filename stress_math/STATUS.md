@@ -1,4 +1,4 @@
-# Experiment status — 2026-10-10
+# Experiment status — 2026-10-11
 
 Completed:
 - Separate stress_math module; existing application code unchanged.
@@ -16,9 +16,16 @@ Completed:
 - Missing-dataset report generation verified: zero real videos, metrics unavailable.
 
 Remaining verification:
-- Real consenting webcam protocol and live index behavior.
+- Real browser calibration/live/finish and pending-initialization cancellation verified; controlled robustness and Python recorded-session protocol still need verification.
 - Authorized UBFC-Phys/other video dataset evaluation.
 - Annotated AU validity and balanced robustness recordings.
 - OLD adapter retained with "OLD has no video scorer"; OLD-vs-NEW comparison replaced by fixed baselines. Real predictive performance of all baseline methods remains unverified.
 
-No training performed. No accuracy improvement established. No changes pushed or deployed to GitHub Pages; this Python module runs locally.
+No training performed. No accuracy improvement established. The live browser graph is deployed. The Python module runs locally; verify publication of the latest optional HF package separately.
+
+Optional HF extension:
+- A/B inference and M0–M5 comparison/report code implemented with lazy dependencies; no fitting or training.
+- Core suite: 17 passed, one optional-dependency test skipped; optional HF suite: all nine passed in the separate Torch/Transformers environment.
+- Actual model A dummy-image inference passed on MPS at revision eef423100d32c018dac57c333100f4f5f7863fb1.
+- Model B actual fp32/no-grad dummy-image inference passed on MPS at revision 32132bdc0b6c9ad71e47a905db5cdf0ae51de85d after disk space became available.
+- Actual HF metadata report generated at results/hf/metrics.json: both immutable hashes, parameter counts and available license declarations recorded. Real-dataset metrics remain pending; zero labeled videos were evaluated.

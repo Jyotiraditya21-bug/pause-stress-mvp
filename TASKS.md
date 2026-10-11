@@ -1,10 +1,38 @@
 # MVP task tracker
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
-## Objective
+## Current scope and status — 2026-10-11
 
-Build a local wellbeing check-in MVP on a MacBook Air M1 within 24–36 hours. Use MediaPipe for experimental facial signals and Gemini for optional guidance. Keep self-reported stress separate from camera metrics. A validated AI stress predictor is outside the core MVP.
+Current MVP: a deployed live experimental facial index, not an entered stress rating. The scale is reversed (0 high-stress end, 10 no-stress end), with baseline feature means at 5/10. Questionnaire/Gemini sections below document historical work; they are not the current browser flow. Training is outside the current scope. Datasets are test-only.
+
+### Completed — 10 grouped work items
+
+1. React/Vite frontend, FastAPI/SQLite foundation and project documentation.
+2. Local MediaPipe camera processing, model/WASM assets and consent/lifecycle code.
+3. Fixed mathematical facial features/index with normalization, sigma floor, gates and smoothing.
+4. Browser live graph with 25-second baseline and removal of entered stress-rating results.
+5. Graph review, optional browser saving, history and deletion implementation.
+6. Test-only dataset/manifest loaders and landmark/score caching.
+7. Math baseline comparisons, coverage exclusions, subject-bootstrap CIs and permutation reports.
+8. Optional pretrained A/B loaders: dynamic labels, crops, 5fps, fp32, batch/MPS inference and lazy imports.
+9. M0–M5 fixed fusion/comparison implementation, paired AUC differences, correlations, params and license/revision reporting code.
+10. Synthetic tests/build checks and deployed live-graph UI verification. Model A actual dummy-image inference passed on MPS; optional dummy-classifier/processor test passed. No real dataset accuracy is established.
+
+### Pending — 8 grouped verification items
+
+1. Real webcam session: calibration, live graph, finish/cancel/navigation/hide shutdown.
+2. Camera robustness: poor light, glasses, motion/yaw, multiple faces, denial and busy camera.
+3. M1 device efficiency/CPU/memory/latency benchmarking on real inputs.
+4. Full mobile/keyboard journey and browser reload/save/delete verification for the new graph flow.
+5. Model B actual pretrained dummy-image smoke completion: last attempt ran out of disk space after the processor compatibility fix.
+6. Obtain authorized video datasets and/or consented own sessions, including optional AU annotations.
+7. Run real-data comparisons and produce populated metrics/model metadata/CI/permutation reports. Current results/metrics.json has zero sessions and no HF model metadata; report-generation code alone is implemented.
+8. Verify publication/deployment of the latest HF comparator extension/source download. Live graph deployment 20145ca is verified; latest local commit is 3b48e2a.
+
+Optional/out of current scope: re-enable/test Gemini guidance with credentials. No training or fine-tuning is planned.
+
+The sections below retain earlier implementation history and may include superseded UI milestones.
 
 ## Phase 1 — Foundation: completed
 
@@ -158,7 +186,25 @@ Live webcam verification and live Gemini verification remain pending; they are n
 - [x] Create `stress_math/hf_evaluate.py` comparing M0 (math), M1 (Model A), M2 (Model B), M3 (M0+M1+M2 fusion), M4 (M0+M1 fusion), and M5 (M0+M2 fusion) with fixed equal weights and z-score baseline calibration.
 - [x] Report ROC-AUC [95% CI], Cohen's d_z, Wilcoxon p, coverage %, ms/frame, param counts, paired AUC differences vs M0, and Spearman score correlations.
 - [x] Include mandatory disclaimers in `report.md` regarding third-party pretrained status, undocumented UBFC-Phys splits, non-stress emotion probabilities, and fixed equal fusion weights.
-- [x] Record model names, resolved revision hashes, and license text in `results/metrics.json`.
+- [x] Implement recording model names, resolved revision hashes, and available license text in comparator metrics output.
+- [ ] Generate actual comparator report/model metadata; the existing metrics.json is the zero-session math report.
 - [x] Update `stress_math/requirements.txt` (`transformers`, `torch`, `huggingface_hub`, `torchvision`, `pillow`) and add `--smoke-test` CLI option.
 - [x] Pass unit tests across math and HF modules without modifying existing core APIs.
 
+
+## Pending-work validation progress — 2026-10-11
+
+- [x] All 18 Python math/HF tests passed in the optional-dependency environment.
+- [x] Actual Model B pretrained dummy-image inference passed on MPS; no training or fitting.
+- [x] Latest HF source deployment succeeded (38070272247) and its downloadable archive includes both comparator modules.
+- [x] Generate HF report with actual hashes/licenses/parameter metadata. It explicitly has zero labeled video sessions; accuracy remains unavailable.
+- [x] Real browser camera initialization, 25-second calibration, live graph and finish verified with user participation.
+- [x] Pending-initialization cancellation verified; video stream detached.
+- [x] User-consented disposable graph save, reload, history/view, delete and reload verified. Only that test session was deleted.
+- [x] Narrow populated history/result layouts and keyboard opening of graph/exact values verified without horizontal page overflow.
+- [x] Fix misleading idle-page hidden error and add bounded initialization with late-resource cleanup. Nine frontend tests passed.
+- [x] Add measured FPS/inference/processing diagnostics for device benchmarking.
+- [ ] Verify these fixes and diagnostic measurements on the updated deployed camera flow.
+- [ ] Controlled lighting/glasses/yaw/multiple-face and permission/busy-camera robustness checks.
+- [ ] CPU/memory benchmark and broader multi-session/device characterization.
+- [ ] Obtain authorized labeled videos or explicitly consented recorded sessions, then run actual M0–M5 accuracy evaluation. No training is planned.
