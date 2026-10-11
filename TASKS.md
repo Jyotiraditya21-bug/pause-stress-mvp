@@ -237,3 +237,13 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Real-camera check: automatic 10-second completion, numeric result, Results navigation and stopped camera verified. No video or graph was saved. This checks flow, not stress accuracy.
 
 - [x] Circular camera preview, 10-second animated progress ring, scan sweep/grid and pulsing dots; reduced-motion support. Scan text reads “Scanning your face…”. Production build and idle browser preview verified; scan timing/result flow preserved.
+
+
+## Repeatability correction — 2026-10-11
+
+- [x] Replace startup-sensitive overlapping score averages with equally weighted time windows and robust feature/score medians.
+- [x] Keep the ten-second scan; settle acquisition in its first second without personal calibration.
+- [x] Tighten framing/pose, use face brightness, and require 80% time coverage plus eight usable windows.
+- [x] Withhold contradictory, sparse, drifting-light or drifting-pose scans with a specific retry reason.
+- [x] 19 frontend tests and production build pass; seeded 20-scan synthetic range reduced from 2.750 to 0.310 points without anchoring to previous scores.
+- [ ] Participant repeatability verification 5–10 minutes apart; fixed reference can still introduce systematic biases. No validated stress accuracy claim.

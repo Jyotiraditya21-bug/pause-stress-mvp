@@ -1,6 +1,6 @@
 import React, {useEffect,useRef,useState} from 'react';
 import {FaceLandmarker,FilesetResolver} from '@mediapipe/tasks-vision';
-import {assessFrame} from './scanMetrics';
+import {assessQuickFrame,faceBrightness} from './scanMetrics';
 import {QuickIndex,headPose,SCAN_SECONDS} from './liveIndex';
 import {awaitResource} from './resourceWait';
 
@@ -28,14 +28,9 @@ export default function CameraScan({onComplete}) {
     const r=runtime.current;
     if(!r.scan) return;
     const duration=Math.min(MAX_SECONDS,(performance.now()-r.scan.start)/1000);
-    const coverage=r.scan.total ? 100*r.scan.valid/r.scan.total : 0;
-    const scores=r.scan.scores;
-    const finalPoint=r.scan.points.at(-1);
-    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:'quick-canonical-index-v1',
-      points:r.scan.points,coveragePercent:coverage,frames:r.scan.total,validFrames:r.scan.valid,
-      durationSeconds:duration,quality:coverage>=40&&scores.length?'good':'poor',
-      average:coverage>=40&&scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:null,
-      latest:coverage>=40&&Number.isFinite(finalPoint?.value)?finalPoint.value:null,
+    const outcome=r.scan.index.finish();
+    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:'quick-canonical-index-v2',
+      ...outcome,frames:r.scan.total,validFrames:r.scan.valid,durationSeconds:duration,
       performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(duration,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
     stop();setState('done');setReading(null);onComplete(summary);
   }
@@ -84,13 +79,12 @@ export default function CameraScan({onComplete}) {
         const inferenceMs=performance.now()-processingStart;
         const ctx=r.sampleCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,64,48);
         const pixels=ctx.getImageData(0,0,64,48).data;
-        let brightness=0;for(let i=0;i<pixels.length;i+=4)brightness+=(pixels[i]+pixels[i+1]+pixels[i+2])/3;
-        brightness/=pixels.length/4;
         const landmarks=result.faceLandmarks[0];
-        const quality=assessFrame(landmarks,result.faceLandmarks.length,brightness,r.previous);
+        const brightness=faceBrightness(pixels,64,48,landmarks);
+        const quality=assessQuickFrame(landmarks,result.faceLandmarks.length,brightness,r.previous);
         r.previous=quality.center;
         const pose=headPose(result.facialTransformationMatrixes[0]);
-        const facing=!!pose&&Math.abs(pose[0])<=35&&Math.abs(pose[1])<=35;
+        const facing=!!pose&&Math.abs(pose[0])<=15&&Math.abs(pose[1])<=15;
         r.good=quality.good&&facing;setGood(r.good);
         setFeedback(quality.good&&!facing?'Face the camera directly for a usable reading.':quality.reason);
         const canvas=overlay.current;
@@ -102,7 +96,7 @@ export default function CameraScan({onComplete}) {
         if(r.scan) {
           const elapsed=(now-r.scan.start)/1000;
           const xy=landmarks?.map(p=>[p.x*v.videoWidth,p.y*v.videoHeight])||[];
-          const observation=r.scan.index.update(elapsed,xy,pose,quality.good);
+          const observation=r.scan.index.update(elapsed,xy,pose,quality.good,{brightness});
           setSeconds(Math.floor(elapsed));setPhase(observation.phase);setReading(observation.value);
           if(observation.reason)setFeedback(observation.reason);
           if(observation.phase==='failed'){stop();setState('idle');setError(observation.reason);return;}

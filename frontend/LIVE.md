@@ -24,8 +24,12 @@ The default page is the camera scan. One Start button authorizes local camera
 processing; after model/camera readiness, a 10-second countdown starts
 immediately and automatically stops the camera and opens Results. No personal
 calibration, questionnaire, manual finish button, or persistent saving is in
-this flow. Results show the mean of all usable frame scores and the scan graph.
-At least 40% usable coverage is required; insufficient signal is unavailable.
+this flow. Results show the median of independent one-second geometric scores
+and the scan graph. The first second settles acquisition inside the same ten
+seconds; it is not used to estimate a personal reference. At least 80% of the
+remaining 45 time slots and eight of nine one-second windows must be usable.
+Each window uses per-slot feature medians, then a feature median across slots.
+There is no cross-scan memory or anchoring to a previous score.
 
 QuickIndex uses fixed canonical MediaPipe geometry as engineering reference
 for four geometric channels. It uses no participant baseline, no blink-rate
@@ -33,3 +37,30 @@ or pulse estimate, and no learned stress model. It is unvalidated and anatomy,
 expression and lighting can confound its result. The offline H0/H1/M0–M5
 25-second rest evaluation protocol remains unchanged and does not validate the
 new quick browser scoring method.
+
+
+## Repeatability correction — 2026-10-11
+
+QuickIndex v2 replaces the overlapping rolling average/EMA with independent
+one-second windows and median aggregation. Canonical reference, geometric
+features, sigma floors and the per-observation score formula are unchanged;
+we did not flatten scores or fit parameters to make retests agree. Missing time
+counts as missing coverage even if the few received frames are all valid.
+The two-face detector remains enabled; explicit feature filtering supplies
+noise suppression while preserving multiple-face rejection.
+
+Fixed engineering acquisition rules: |yaw| and |pitch| <=15 degrees, tighter
+framing, face-region brightness (rather than whole-frame/background brightness),
+90th–10th percentile window-score spread <=1 point, early/late-window median
+difference <=0.75, within-scan pose span <=6 degrees, and brightness span <=30
+on the 0–255 scale. These are provisional quality rules, not clinical cutoffs.
+A failed check produces a specific retry reason and withholds the score/graph.
+Consistent systematic bias between scans can still pass these checks.
+
+Verification: 19 frontend tests passed. Run the reproducible synthetic check:
+`node frontend/scripts/repeatability.mjs`. Twenty synthetic repeats of the same
+face geometry with seeded tracking noise and startup perturbations produced a
+2.750-point range (SD 1.238) with the previous algorithm versus 0.310 (SD 0.083)
+with v2; all twenty were accepted. This is a specific synthetic regression,
+not an estimate of human performance, cross-device stability, or stress accuracy.
+Real repeat scans 5–10 minutes apart still require participant verification.

@@ -22,3 +22,32 @@ export function summarize(samples, total, duration) {
     usablePercent: Math.round(ratio*100), frames: samples.length, durationSeconds: Math.round(duration),
     meanBlinkCoefficient: mean('blink'), meanBrowCoefficient: mean('brow'), meanMovement: mean('movement')};
 }
+
+
+// Scan-specific checks keep the existing assessFrame API available to old callers.
+export function assessQuickFrame(points,faceCount,brightness,previous) {
+  if(!Number.isFinite(brightness))return {good:false,reason:'Position your face inside the circle.'};
+  const q=assessFrame(points,faceCount,brightness,previous);
+  if(!q.good)return q;
+  const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
+  const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
+  let reason='';
+  if(width<.25||height<.35)reason='Move closer so your face fills the circle.';
+  else if(width>.65||height>.85)reason='Move a little farther from the camera.';
+  else if(Math.abs(q.center.x-.5)>.1||Math.abs(q.center.y-.5)>.12)reason='Centre your face inside the circle.';
+  else if(q.movement>.015)reason='Hold still for a repeatable scan.';
+  return {...q,good:!reason,reason:reason||q.reason};
+}
+
+export function faceBrightness(pixels,width,height,points) {
+  if(!points?.length)return NaN;
+  const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+  if(![...xs,...ys].every(Number.isFinite))return NaN;
+  const x0=Math.max(0,Math.floor(Math.min(...xs)*width)),x1=Math.min(width,Math.ceil(Math.max(...xs)*width));
+  const y0=Math.max(0,Math.floor(Math.min(...ys)*height)),y1=Math.min(height,Math.ceil(Math.max(...ys)*height));
+  let sum=0,n=0;
+  for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+    const i=(y*width+x)*4;sum+=(pixels[i]+pixels[i+1]+pixels[i+2])/3;n++;
+  }
+  return n?sum/n:NaN;
+}

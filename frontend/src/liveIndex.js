@@ -1,3 +1,4 @@
+import {ScanReliability} from './scanReliability.js';
 import canonical from './faceReference.json' with {type:'json'};
 
 export const FEATURES = ['blink_rate','brow_furrow','lip_press','lip_corner','jaw_clench','jitter'];
@@ -114,14 +115,20 @@ export class QuickIndex {
     const p=Array.from({length:478},()=>[0,0]);
     canonical.indices.forEach((i,n)=>{p[i]=[...canonical.reference[n]];});
     const g=geometry(p),row=Object.fromEntries(['brow_furrow','lip_press','lip_corner','jaw_clench'].map(k=>[k,g[k]]));
-    this.model=new FixedIndex(Array.from({length:5},()=>({...row})));
+    this.reference=Array.from({length:5},()=>({...row}));
+    this.measurements=new ScanReliability(Object.keys(row),r=>new FixedIndex(this.reference).score(r));
   }
-  update(time,points,pose,qualityGood) {
-    if(!qualityGood||!pose?.every(Number.isFinite)||Math.abs(pose[0])>35||Math.abs(pose[1])>35)return {value:null,phase:'live',valid:false};
-    try {
-      const row={...geometry(points),time};row.gated=row.mar>.35;
-      const value=this.model.score(row);
-      return {value,phase:'live',valid:Number.isFinite(value),reason:row.gated?'Keep still and avoid speaking during the scan.':''};
-    } catch {return {value:null,phase:'live',valid:false};}
+  update(time,points,pose,qualityGood,context={}) {
+    let row=null,reason='';
+    if(qualityGood&&pose?.every(Number.isFinite)&&Math.abs(pose[0])<=15&&Math.abs(pose[1])<=15) {
+      try {
+        row={...geometry(points),time};
+        if(row.mar>.25){row=null;reason='Keep your mouth relaxed and avoid speaking.';}
+      } catch {row=null;}
+    } else if(qualityGood)reason='Face straight ahead for a repeatable scan.';
+    this.measurements.add(time,row,{...context,pitch:pose?.[0],yaw:pose?.[1]});
+    // The score is calculated once from independent time windows at completion.
+    return {value:null,phase:'live',valid:!!row,reason};
   }
+  finish(){return this.measurements.finish();}
 }
