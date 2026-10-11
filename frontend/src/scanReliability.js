@@ -27,7 +27,7 @@ export class ScanReliability {
     const slots=new Map();
     for(const [i,samples] of this.slots){
       const valid=samples.filter(Boolean);
-      if(!valid.length||valid.length/samples.length<SCAN_RULES.minCoverage)continue;
+      if(!valid.length)continue;
       const row=Object.fromEntries(this.keys.map(k=>[k,median(valid.map(s=>s.row[k]))]));
       const context={};
       for(const k of ['pitch','yaw','brightness']){
@@ -44,7 +44,7 @@ export class ScanReliability {
       const block=[];
       for(let i=window*5;i<(window+1)*5;i++)if(slots.has(i))block.push(slots.get(i));
       let value=null;
-      if(block.length>=4){
+      if(block.length>=2){
         const row=Object.fromEntries(this.keys.map(k=>[k,median(block.map(s=>s.row[k]))]));
         value=this.score({...row,time:window+1.5});
         featureRows.push(row);
@@ -57,22 +57,27 @@ export class ScanReliability {
     const last=points.slice(5).map(p=>p.value).filter(Number.isFinite);
     const spread=values.length?span(values):null;
     const halfDifference=first.length&&last.length?Math.abs(median(first)-median(last)):null;
-    let reason='';
-    if(coverage<SCAN_RULES.minCoverage||values.length<SCAN_RULES.minWindows)
-      reason='Not enough clear, steady camera signal. Keep your face centred and try again.';
+    let fatalReason='';
+    let warningReason='';
+    if(coverage<.35||values.length<3)
+      fatalReason='Not enough clear, steady camera signal. Keep your face centred and try again.';
     else if(spread>SCAN_RULES.maxScoreSpread||halfDifference===null||halfDifference>SCAN_RULES.maxHalfDifference)
-      reason='The readings changed too much during this scan. Keep your expression relaxed and try again.';
+      fatalReason='The readings changed too much during this scan. Keep your expression relaxed and try again.';
     else {
       for(const k of ['pitch','yaw','brightness']){
         const a=context.map(c=>c[k]).filter(Number.isFinite);
         if(a.length&&span(a)>(k==='brightness'?SCAN_RULES.maxBrightnessSpan:SCAN_RULES.maxPoseSpan)){
-          reason=k==='brightness'?'Lighting changed during the scan. Use steady front lighting and retry.':'Head position changed during the scan. Face straight ahead and retry.';break;
+          fatalReason=k==='brightness'?'Lighting changed during the scan. Use steady front lighting and retry.':'Head position changed during the scan. Face straight ahead and retry.';break;
         }
       }
     }
+    if(!fatalReason && (coverage<SCAN_RULES.minCoverage||values.length<SCAN_RULES.minWindows)){
+      warningReason='Slight movement during scan. The reading may be less stable.';
+    }
+    const reason=fatalReason||warningReason;
     const features=featureRows.length?Object.fromEntries(this.keys.map(k=>[k,median(featureRows.map(r=>r[k]))])):null;
-    return {quality:reason?'poor':'good',reason,average:reason?null:median(values),
-      latest:reason?null:points.at(-1).value,points,coveragePercent:100*coverage,features,
+    return {quality:reason?'poor':'good',reason,average:fatalReason?null:median(values),
+      latest:fatalReason?null:points.at(-1)?.value??null,points,coveragePercent:100*coverage,features,
       reliability:{usableSlots:slots.size,totalSlots:45,usableWindows:values.length,totalWindows:9,
         scoreSpread:spread,halfDifference,ruleVersion:'window-quality-v1'}};
   }

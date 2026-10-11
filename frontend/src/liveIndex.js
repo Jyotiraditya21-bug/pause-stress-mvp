@@ -127,10 +127,11 @@ export class QuickIndex {
   }
   update(time,points,pose,qualityGood,context={}) {
     let row=null,reason='';
-    if(qualityGood&&pose?.every(Number.isFinite)&&Math.abs(pose[0])<=15&&Math.abs(pose[1])<=15) {
+    const facing=!pose||(pose.every(Number.isFinite)&&Math.abs(pose[0])<=38&&Math.abs(pose[1])<=30);
+    if(qualityGood&&facing) {
       try {
         row={...geometry(points),time};
-        if(row.mar>.25){row=null;reason='Keep your mouth relaxed and avoid speaking.';}
+        if(row.mar>.32){row=null;reason='Keep your mouth relaxed and avoid speaking.';}
       } catch {row=null;}
     } else if(qualityGood)reason='Face straight ahead for a repeatable scan.';
     this.measurements.add(time,row,{...context,pitch:pose?.[0],yaw:pose?.[1]});

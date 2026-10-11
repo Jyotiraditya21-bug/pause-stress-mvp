@@ -5,13 +5,13 @@ export function assessFrame(points, faceCount, brightness, previous) {
   const height = Math.max(...ys) - Math.min(...ys);
   const center = {x: (Math.max(...xs) + Math.min(...xs))/2, y: (Math.max(...ys) + Math.min(...ys))/2};
   let reason = '';
-  if (brightness < 45) reason = 'Add more light in front of your face.';
-  else if (brightness > 225) reason = 'Reduce bright light or backlighting.';
-  else if (width < .18 || height < .22) reason = 'Move closer to the camera.';
-  else if (width > .8 || height > .9) reason = 'Move a little farther from the camera.';
-  else if (Math.abs(center.x - .5) > .2 || Math.abs(center.y - .5) > .22) reason = 'Move your face toward the centre.';
+  if (brightness < 18) reason = 'Add more light in front of your face.';
+  else if (brightness > 240) reason = 'Reduce bright light or backlighting.';
+  else if (width < .15 || height < .20) reason = 'Move closer to the camera.';
+  else if (width > .85 || height > .95) reason = 'Move a little farther from the camera.';
+  else if (Math.abs(center.x - .5) > .24 || Math.abs(center.y - .5) > .24) reason = 'Move your face toward the centre.';
   const movement = previous ? Math.hypot(center.x - previous.x, center.y - previous.y) : 0;
-  if (!reason && movement > .035) reason = 'Hold still for a clearer reading.';
+  if (!reason && movement > .05) reason = 'Hold still for a clearer reading.';
   return {good: !reason, reason: reason || 'Good framing. Keep still and look toward the camera.', center, movement};
 }
 
@@ -32,10 +32,10 @@ export function assessQuickFrame(points,faceCount,brightness,previous) {
   const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
   const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
   let reason='';
-  if(width<.25||height<.35)reason='Move closer so your face fills the circle.';
-  else if(width>.65||height>.85)reason='Move a little farther from the camera.';
-  else if(Math.abs(q.center.x-.5)>.1||Math.abs(q.center.y-.5)>.12)reason='Centre your face inside the circle.';
-  else if(q.movement>.015)reason='Hold still for a repeatable scan.';
+  if(width<.15||height<.20)reason='Move closer so your face fills the circle.';
+  else if(width>.85||height>.95)reason='Move a little farther from the camera.';
+  else if(Math.abs(q.center.x-.5)>.24||Math.abs(q.center.y-.5)>.24)reason='Centre your face inside the circle.';
+  else if(q.movement>.05)reason='Hold still for a repeatable scan.';
   return {...q,good:!reason,reason:reason||q.reason};
 }
 

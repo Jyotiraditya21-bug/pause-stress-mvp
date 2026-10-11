@@ -83,8 +83,8 @@ export default function CameraScan({onComplete}) {
         const brightness=faceBrightness(pixels,64,48,landmarks);
         const quality=assessQuickFrame(landmarks,result.faceLandmarks.length,brightness,r.previous);
         r.previous=quality.center;
-        const pose=headPose(result.facialTransformationMatrixes[0]);
-        const facing=!!pose&&Math.abs(pose[0])<=15&&Math.abs(pose[1])<=15;
+        const pose=headPose(result.facialTransformationMatrixes?.[0]);
+        const facing=!pose||(Math.abs(pose[0])<=38&&Math.abs(pose[1])<=30);
         r.good=quality.good&&facing;setGood(r.good);
         setFeedback(quality.good&&!facing?'Face the camera directly for a usable reading.':quality.reason);
         const canvas=overlay.current;
