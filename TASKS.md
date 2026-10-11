@@ -227,3 +227,11 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] JSON/Markdown reports and three requested plots; documented run commands.
 - [ ] Run real labeled-video evaluation: authorized rest/task videos are still required. Synthetic regression is not accuracy evidence.
 - Verification: all 24 Python tests passed in the optional Torch/Transformers environment, including byte-compatible feature-table checks, 300-frame parity, real synthetic-video decoding, both HF-enabled/disabled report paths, 36%/40% exclusion boundary, and time-based EMA equivalence. Reports generated locally with zero real labeled sessions; no predictive accuracy claimed.
+
+## Client flow correction — 2026-10-11
+
+- [x] Default to scan page; single Start action, 10-second scan, automatic Results navigation and camera shutdown.
+- [x] Remove personal calibration and manual start/finish steps; simplify Results to score and graph.
+- [x] Separate fixed-reference QuickIndex from unchanged offline rest-calibrated evaluation methods.
+- [x] Ten frontend tests pass, including immediate scores with no baseline and invalid-frame rejection.
+- [ ] Real-camera validation of the new 10-second flow (prior 25-second live validation does not cover this change).

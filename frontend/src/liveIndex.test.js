@@ -72,3 +72,13 @@ test('camera sessions use separate storage and preserve old questionnaire record
   assert.equal(values.get('pause-checkins-v1'),'[{"self_reported_stress":8}]');
   delete globalThis.localStorage;
 });
+
+test('quick scan scores immediately without a personal baseline',async()=>{
+  const {QuickIndex,SCAN_SECONDS}=await import('./liveIndex.js');assert.equal(SCAN_SECONDS,10);
+  const scan=new QuickIndex(),initial=scan.update(0,reference(),[0,0,0],true);
+  assert.equal(initial.phase,'live');assert.ok(Number.isFinite(initial.value));
+  assert.equal(scan.update(1,reference(),[0,40,0],true).value,null);
+  assert.equal(scan.update(2,reference(),[0,0,0],false).value,null);
+  const changed=reference();changed[107][0]+=1;
+  assert.notEqual(new QuickIndex().update(0,changed,[0,0,0],true).value,initial.value);
+});

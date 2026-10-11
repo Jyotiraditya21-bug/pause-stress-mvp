@@ -7,7 +7,7 @@ import Experiment from './Experiment';
 import {readCameraSessions,saveCameraSession,deleteCameraSession} from './cameraSessions';
 
 function App() {
-  const [screen,setScreen]=useState('Overview'),[result,setResult]=useState(null);
+  const [screen,setScreen]=useState('Live'),[result,setResult]=useState(null);
   const [storageConsent,setStorageConsent]=useState(false),[notice,setNotice]=useState('');
   const [error,setError]=useState('');
   const [sessions,setSessions]=useState(()=>{try{return readCameraSessions();}catch{return[];}});
@@ -30,18 +30,15 @@ function App() {
     <main><p className="save-notice" role="status">{notice}</p>{error&&<p role="alert" className="camera-error">{error}</p>}
       {screen==='Overview'&&<>
         <p className="eyebrow">LIVE CAMERA · NO QUESTIONNAIRE SCORE</p><h1>Pause. Watch.<br/><em>Explore your facial patterns.</em></h1>
-        <p className="intro">A live camera graph powered by a fixed mathematical facial index. Calibrate while relaxed for 25 seconds, then follow changes on a 0–10 scale.</p>
-        <button className="primary" onClick={()=>navigate('Live')}>Start live camera graph →</button>
-        <div className="cards"><article><span>01 / CALIBRATE</span><h2>Your personal baseline</h2><p>Start relaxed, face the camera, and stay quiet for 25 seconds.</p></article><article><span>02 / FOLLOW</span><h2>A graph that updates live</h2><p>0 is the high-stress end; 10 is the no-stress end. Baseline maps to 5. The scale is an experimental proxy, not measured stress.</p></article><article><span>03 / REVIEW</span><h2>Keep your session private</h2><p>Review the graph and optionally save it in this browser. Video is never recorded or uploaded.</p></article></div>
-        <section className="status"><strong>What drives the graph?</strong><p>Blink events, brow and lip geometry, jaw geometry, and head-motion jitter relative to your baseline. Fixed weights and a sigma floor are used. Pulse/HRV is excluded. No entered stress rating drives the result.</p></section>
+        <p className="intro">Look at the camera for 10 seconds, then see your experimental score automatically.</p>
+        <button className="primary" onClick={()=>navigate('Live')}>Open 10-second scan →</button>
+        <div className="cards"><article><span>01 / SCAN</span><h2>Look at the camera</h2><p>One 10-second scan. No calibration or questionnaire.</p></article><article><span>02 / SCORE</span><h2>See your result</h2><p>Your score opens automatically when the scan ends.</p></article><article><span>03 / PRIVATE</span><h2>On your device</h2><p>Video is never recorded or uploaded.</p></article></div>
       </>}
-      {screen==='Live'&&<><p className="eyebrow">REAL-TIME FACIAL BEHAVIOR</p><h1>Your live session.</h1><CameraScan onComplete={completed}/></>}
-      {screen==='Results'&&<><p className="eyebrow">SESSION REVIEW</p><h1>Your camera-derived graph.</h1>{result?<>
+      {screen==='Live'&&<><p className="eyebrow">REAL-TIME FACIAL BEHAVIOR</p><h1>Your 10-second scan.</h1><CameraScan onComplete={completed}/></>}
+      {screen==='Results'&&<><p className="eyebrow">SESSION REVIEW</p><h1>Your score.</h1>{result?<>
         <p>{new Date(result.created_at).toLocaleString()} · {Math.round(result.durationSeconds)} seconds</p>
-        <div className="cards"><article><h2>Average index</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'—'}<small> / 10</small></p><p>Experimental facial index. No questionnaire rating is used.</p></article><article><h2>Last plotted reading</h2><p className="rating">{Number.isFinite(result.latest)?result.latest.toFixed(1):'—'}<small> / 10</small></p><p>0 = high-stress end · 10 = no-stress end. Baseline feature means = 5.</p></article><article><h2>Usable signal coverage</h2><p className="rating">{result.coveragePercent.toFixed(0)}<small>%</small></p><p>{result.quality==='good'?'At least 40% of post-calibration frames were usable.':'Below the fixed coverage minimum or no usable scores. Aggregate readings are withheld.'}</p></article></div>
+        <section className="panel"><h2>Stress score</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'Unavailable'}{Number.isFinite(result.average)&&<small> / 10</small>}</p><p>0 = high stress · 10 = no stress</p><p className="fine">{result.quality==='good'?'Experimental estimate from your scan.':'Not enough usable camera frames. Try again with even lighting and your face in view.'}</p></section>
         <LiveGraph points={result.points}/>
-        {result.performance&&<section className="panel"><h2>Device performance</h2><p>{result.performance.fps.toFixed(1)} processed frames/s · Mean landmark inference: {result.performance.inferenceMs?.toFixed(1) ?? "Unavailable"} ms/frame · Mean analysis processing: {result.performance.processingMs?.toFixed(1) ?? "Unavailable"} ms/frame.</p><p className="fine">Measured during this session, including calibration. This is processing efficiency, not stress accuracy.</p></section>}
-        <section className="panel"><h2>Save this graph?</h2><p>Only elapsed-time index samples and this summary are saved. Anyone using this browser profile can view them; clearing site data erases them.</p>{isSaved?<p>This session is saved.</p>:<><label className="consent"><input type="checkbox" checked={storageConsent} onChange={e=>setStorageConsent(e.target.checked)}/> I agree to save this graph and summary in this browser.</label><button className="primary" disabled={!storageConsent} onClick={save}>Save session</button></>}</section>
         <button className="primary" onClick={()=>navigate('Live')}>Start another session →</button>
       </>:<><p>Finish a live session or choose a saved graph from History.</p><button className="primary" onClick={()=>navigate('Live')}>Open live camera</button></>}</>}
       {screen==='History'&&<><p className="eyebrow">SAVED CAMERA SESSIONS</p><h1>Your previous graphs.</h1><section className="panel"><h2>{sessions.length?sessions.length+' saved sessions':'No camera sessions saved yet'}</h2>{sessions.map(s=><div className="history-row" key={s.id}><div><strong>{Number.isFinite(s.average)?s.average.toFixed(1)+'/10 · average experimental index':'Insufficient signal coverage'}</strong><p>{new Date(s.created_at).toLocaleString()} · {s.coveragePercent.toFixed(0)}% coverage</p></div><div><button className="secondary" onClick={()=>{setResult(s);navigate('Results');}}>View graph</button><button className="secondary" onClick={()=>remove(s.id)}>Delete</button></div></div>)}{!sessions.length&&<button className="primary" onClick={()=>navigate('Live')}>Start a live session</button>}</section></>}

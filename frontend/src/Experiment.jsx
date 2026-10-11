@@ -15,7 +15,7 @@ export default function Experiment() {
       <p>Live mode asks for recording consent and saves a four-minute session locally: two minutes relaxed, then two minutes timed arithmetic. No video is uploaded.</p>
     </section>
     <div className="cards">
-      <article><h2>Fixed rules</h2><p>A 25-second personal baseline, 75 selected landmarks, fixed equal weights, and a sigma floor. No training or tuning on test data.</p></article>
+      <article><h2>Fixed rules</h2><p>The offline Python experiment uses a 25-second personal baseline. The browser uses a separate 10-second scan with a fixed canonical-face reference and no personal calibration. No training or tuning on test data.</p></article>
       <article><h2>Compare the evidence</h2><p>Compare each feature alone, the index without pulse features, and all available features. Evaluate AUC, paired differences and subject-bootstrap intervals, plus 1,000 label permutations.</p></article>
       <article><h2>Check signal coverage</h2><p>Exclude videos with less than 40% usable frames after pose and speaking/smiling checks. Reports show coverage, exclusions and processing time.</p></article>
     </div>

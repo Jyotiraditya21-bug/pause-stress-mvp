@@ -1,27 +1,26 @@
 import React, {useEffect,useRef,useState} from 'react';
 import {FaceLandmarker,FilesetResolver} from '@mediapipe/tasks-vision';
 import {assessFrame} from './scanMetrics';
-import {LiveIndex,headPose,BASELINE_SECONDS} from './liveIndex';
-import LiveGraph from './LiveGraph';
+import {QuickIndex,headPose,SCAN_SECONDS} from './liveIndex';
 import {awaitResource} from './resourceWait';
 
-const MAX_SECONDS=300;
+const MAX_SECONDS=SCAN_SECONDS;
 export default function CameraScan({onComplete}) {
-  const [consent,setConsent]=useState(false),[state,setState]=useState('idle');
+  const [state,setState]=useState('idle');
   const [error,setError]=useState(''),[feedback,setFeedback]=useState('');
   const [seconds,setSeconds]=useState(0),[good,setGood]=useState(false);
-  const [points,setPoints]=useState([]),[reading,setReading]=useState(null),[phase,setPhase]=useState('baseline');
+  const [points,setPoints]=useState([]),[reading,setReading]=useState(null),[phase,setPhase]=useState('live');
   const [perf,setPerf]=useState(null);
   const video=useRef(null),overlay=useRef(null),runtime=useRef({}),mounted=useRef(true);
   function stop() {
-    const r=runtime.current;cancelAnimationFrame(r.frame);
+    const r=runtime.current;cancelAnimationFrame(r.frame);clearTimeout(r.timer);
     r.stream?.getTracks().forEach(t=>t.stop());r.model?.close();
     if(video.current) video.current.srcObject=null;
     runtime.current={};
   }
   useEffect(()=>{
     mounted.current=true;
-    const hide=()=>{if(document.hidden&&(runtime.current.starting||runtime.current.stream)){stop();setState('idle');setReading(null);setGood(false);setError('Camera stopped because this page was hidden. Start again to recalibrate.');}};
+    const hide=()=>{if(document.hidden&&(runtime.current.starting||runtime.current.stream)){stop();setState('idle');setReading(null);setGood(false);setError('Camera stopped because this page was hidden. Start the 10-second scan again.');}};
     document.addEventListener('visibilitychange',hide);
     return()=>{mounted.current=false;document.removeEventListener('visibilitychange',hide);stop();};
   },[]);
@@ -30,9 +29,9 @@ export default function CameraScan({onComplete}) {
     if(!r.scan) return;
     const duration=Math.min(MAX_SECONDS,(performance.now()-r.scan.start)/1000);
     const coverage=r.scan.total ? 100*r.scan.valid/r.scan.total : 0;
-    const scores=r.scan.points.map(p=>p.value).filter(Number.isFinite);
+    const scores=r.scan.scores;
     const finalPoint=r.scan.points.at(-1);
-    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:'fixed-facial-index-v1',
+    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:'quick-canonical-index-v1',
       points:r.scan.points,coveragePercent:coverage,frames:r.scan.total,validFrames:r.scan.valid,
       durationSeconds:duration,quality:coverage>=40&&scores.length?'good':'poor',
       average:coverage>=40&&scores.length?scores.reduce((a,b)=>a+b,0)/scores.length:null,
@@ -57,7 +56,7 @@ export default function CameraScan({onComplete}) {
       r.model=await awaitResource(FaceLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`,delegate:'CPU'},runningMode:'VIDEO',numFaces:2,outputFacialTransformationMatrixes:true}),{isCurrent,dispose:model=>model.close(),message:'Facial analysis initialization timed out. Please retry.'});
       if(!mounted.current||runtime.current!==r){r.model.close();return;}
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
-      r.lastVideoTime=-1;r.lastRun=0;r.starting=false;setState('ready');tick();
+      r.lastVideoTime=-1;r.lastRun=0;r.starting=false;begin();tick();
     } catch(e) {
       if(!mounted.current||runtime.current!==r) return;
       stop();setState('idle');
@@ -73,7 +72,7 @@ export default function CameraScan({onComplete}) {
       const elapsed=(now-r.scan.start)/1000;setSeconds(Math.floor(elapsed));
       if(now-r.lastRun>1500){
         setReading(null);setGood(false);r.good=false;setFeedback('Reading paused: no fresh camera frames.');
-        r.scan.index.previous=null;r.scan.index.closed=null;
+
         if(elapsed-r.scan.lastPlot>=1){r.scan.points.push({time:elapsed,value:null});r.scan.lastPlot=elapsed;setPoints([...r.scan.points]);}
       }
     }
@@ -107,7 +106,7 @@ export default function CameraScan({onComplete}) {
           setSeconds(Math.floor(elapsed));setPhase(observation.phase);setReading(observation.value);
           if(observation.reason)setFeedback(observation.reason);
           if(observation.phase==='failed'){stop();setState('idle');setError(observation.reason);return;}
-          if(observation.phase==='live'){r.scan.total++;if(observation.valid)r.scan.valid++;}
+          if(observation.phase==='live'){r.scan.total++;if(observation.valid){r.scan.valid++;r.scan.scores.push(observation.value);}}
           // One representative sample per second; rejected seconds remain explicit gaps.
           if(elapsed-r.scan.lastPlot>=1) {
             r.scan.points.push({time:elapsed,value:observation.value});r.scan.lastPlot=elapsed;
@@ -123,34 +122,30 @@ export default function CameraScan({onComplete}) {
     r.frame=requestAnimationFrame(tick);
   }
   function begin() {
-    const r=runtime.current;if(!r.good)return;
-    r.scan={start:performance.now(),index:new LiveIndex(),points:[],lastPlot:-1,total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0};
-    setSeconds(0);setPoints([]);setReading(null);setPhase('baseline');setPerf(null);setState('scanning');
+    const r=runtime.current;
+    r.scan={start:performance.now(),index:new QuickIndex(),scores:[],points:[],lastPlot:-1,total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0};
+    setSeconds(0);setPoints([]);setReading(null);setPhase('live');setPerf(null);setState('scanning');
+    r.timer=setTimeout(()=>{if(runtime.current===r&&mounted.current)finish();},SCAN_SECONDS*1000);
   }
   const active=['loading','ready','scanning'].includes(state);
   return <>
     <section className="panel">
-      <h2>Your live camera session</h2>
-      <p>Calibrate for 25 seconds while relaxed, then watch an experimental facial index change live. No questionnaire rating is used. Video stays in this browser; it is not recorded or uploaded.</p>
-      <label className="consent"><input type="checkbox" checked={consent} disabled={active} onChange={e=>setConsent(e.target.checked)}/> I agree to local camera processing for this session.</label>
+      <h2>10-second camera scan</h2>
+      <p>Look at the camera for 10 seconds. Your score opens automatically. Video stays in your browser.</p>
       <div className="live-layout"><div>
         <div className="camera"><video ref={video} autoPlay playsInline muted/><canvas ref={overlay} aria-hidden="true"/>{!active&&<div className="camera-placeholder">Camera stopped</div>}</div>
         <p role="status" className={good?'quality good':'quality'}>{state==='loading'?'Starting camera and facial analysis…':active?feedback:'Face the camera with even lighting and only one person in view.'}</p>
       </div><div className="live-reading">
-        <p className="eyebrow">EXPERIMENTAL FACIAL INDEX</p>
-        <p className="rating">{Number.isFinite(reading)?reading.toFixed(1):'—'}<small> / 10</small></p>
-        <p>{state==='scanning'&&phase==='baseline'?`Calibrating · ${Math.max(0,BASELINE_SECONDS-seconds)} seconds remaining`:state==='scanning'?Number.isFinite(reading)?'Live camera-derived reading':'Paused · no usable reading':'Start a session to see live readings.'}</p>
-        <p>0 = high stress<br/>10 = no stress</p>
-        <p className="fine">Experimental scale labels. This is a facial behavior proxy, not a verified measurement of stress. Your personal baseline maps to 5/10.</p>
+        <p className="eyebrow">10-SECOND SCAN</p>
+        <p className="rating">{state==='scanning'?Math.max(0,SCAN_SECONDS-seconds):SCAN_SECONDS}<small> seconds</small></p>
+        <p>{state==='scanning'?`${Math.max(0,SCAN_SECONDS-seconds)} seconds remaining`:'Ready for a 10-second scan.'}</p>
+
+        <p className="fine">Experimental facial estimate, not a validated stress measurement.</p>
       </div></div>
-      {state==='scanning'&&perf&&<p className="fine">Processing: {perf.fps.toFixed(1)} frames/s · Latest landmark inference: {perf.inferenceMs.toFixed(1)} ms/frame. Sampling is capped at 10 Hz.</p>}
       {error&&<p role="alert" className="camera-error">{error}</p>}
-      {state==='scanning'&&<p>{seconds}s elapsed · Session ends at {MAX_SECONDS}s. {phase==='baseline'?'Stay relaxed and avoid speaking during calibration.':'Speaking, smiling and poor framing pause readings.'}</p>}
-      {!active&&<button className="primary" disabled={!consent} onClick={start}>Enable camera</button>}
-      {state==='ready'&&<button className="primary" disabled={!good} onClick={begin}>Calibrate and start live graph</button>}
-      {state==='scanning'&&phase==='live'&&<button className="primary" onClick={finish}>Finish and review session</button>}
+      {!active&&<><button className="primary" onClick={start}>Start 10-second scan</button><p className="fine">By starting, you allow local camera processing for this scan.</p></>}
       {active&&<button className="secondary" onClick={()=>{stop();setState('idle');setReading(null);setSeconds(0);setPoints([]);}}>Cancel and stop camera</button>}
     </section>
-    <LiveGraph points={points} live/>
+
   </>;
 }

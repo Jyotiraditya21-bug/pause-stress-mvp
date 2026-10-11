@@ -17,3 +17,19 @@ Run tests: node --test frontend/src/liveIndex.test.js
 MediaPipe output/pose references: https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js and https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/framework/formats/matrix_data.proto. The derived canonical reference uses MediaPipe's Apache-2.0 asset; public/LICENSE.mediapipe includes its license.
 
 2026-10-11 validation: real camera initialization, 25-second calibration, live graph, finish and pending-initialization cancellation passed in the in-app browser. Consented disposable graph saving, reload/history/view and deletion/reload passed. Populated history/results and keyboard access to exact values were checked at a narrow mobile viewport without horizontal page overflow. The test graph was deleted, and no video was saved. Idle-page hiding no longer emits a false camera error. Resource initialization now times out after 30 seconds and disposes of late streams/models; three lifecycle resource tests cover success, cancellation and late resolution. Session FPS, mean detector time and total processing time are now reported as technical diagnostics. Controlled robustness conditions and labeled accuracy evaluation remain pending.
+
+## Current client flow — 2026-10-11
+
+The default page is the camera scan. One Start button authorizes local camera
+processing; after model/camera readiness, a 10-second countdown starts
+immediately and automatically stops the camera and opens Results. No personal
+calibration, questionnaire, manual finish button, or persistent saving is in
+this flow. Results show the mean of all usable frame scores and the scan graph.
+At least 40% usable coverage is required; insufficient signal is unavailable.
+
+QuickIndex uses fixed canonical MediaPipe geometry as engineering reference
+for four geometric channels. It uses no participant baseline, no blink-rate
+or pulse estimate, and no learned stress model. It is unvalidated and anatomy,
+expression and lighting can confound its result. The offline H0/H1/M0–M5
+25-second rest evaluation protocol remains unchanged and does not validate the
+new quick browser scoring method.

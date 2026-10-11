@@ -106,3 +106,22 @@ export class LiveIndex {
     return {value,phase:'live',valid:Number.isFinite(value),reason:row?.gated?'Reading paused while speaking or smiling.':!qualityGood?'Reading paused: improve camera framing or lighting.':!pose||Math.abs(pose[0])>35||Math.abs(pose[1])>35?'Reading paused: face the camera.':''};
   }
 }
+
+// Fixed engineering reference; no personal calibration or fitting on task labels.
+export const SCAN_SECONDS=10;
+export class QuickIndex {
+  constructor() {
+    const p=Array.from({length:478},()=>[0,0]);
+    canonical.indices.forEach((i,n)=>{p[i]=[...canonical.reference[n]];});
+    const g=geometry(p),row=Object.fromEntries(['brow_furrow','lip_press','lip_corner','jaw_clench'].map(k=>[k,g[k]]));
+    this.model=new FixedIndex(Array.from({length:5},()=>({...row})));
+  }
+  update(time,points,pose,qualityGood) {
+    if(!qualityGood||!pose?.every(Number.isFinite)||Math.abs(pose[0])>35||Math.abs(pose[1])>35)return {value:null,phase:'live',valid:false};
+    try {
+      const row={...geometry(points),time};row.gated=row.mar>.35;
+      const value=this.model.score(row);
+      return {value,phase:'live',valid:Number.isFinite(value),reason:row.gated?'Keep still and avoid speaking during the scan.':''};
+    } catch {return {value:null,phase:'live',valid:false};}
+  }
+}
