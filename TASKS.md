@@ -19,16 +19,22 @@ Current MVP: a deployed live experimental facial index, not an entered stress ra
 9. M0–M5 fixed fusion/comparison implementation, paired AUC differences, correlations, params and license/revision reporting code.
 10. Synthetic tests/build checks and deployed live-graph UI verification. Model A actual dummy-image inference passed on MPS; optional dummy-classifier/processor test passed. No real dataset accuracy is established.
 
-### Pending — 8 grouped verification items
+### Newly verified — 2026-10-11
 
-1. Real webcam session: calibration, live graph, finish/cancel/navigation/hide shutdown.
-2. Camera robustness: poor light, glasses, motion/yaw, multiple faces, denial and busy camera.
-3. M1 device efficiency/CPU/memory/latency benchmarking on real inputs.
-4. Full mobile/keyboard journey and browser reload/save/delete verification for the new graph flow.
-5. Model B actual pretrained dummy-image smoke completion: last attempt ran out of disk space after the processor compatibility fix.
-6. Obtain authorized video datasets and/or consented own sessions, including optional AU annotations.
-7. Run real-data comparisons and produce populated metrics/model metadata/CI/permutation reports. Current results/metrics.json has zero sessions and no HF model metadata; report-generation code alone is implemented.
-8. Verify publication/deployment of the latest HF comparator extension/source download. Live graph deployment 20145ca is verified; latest local commit is 3b48e2a.
+- Actual Model B inference on MPS; all 18 Python tests and nine frontend tests pass.
+- Actual model revision/license/parameter report generated; zero available labeled videos explicitly reported.
+- Latest source archive and deployments verified.
+- Real webcam initialization, calibration, live graph, finish, cancellation and navigation cleanup verified.
+- Disposable graph save/reload/view/delete/reload verified with user consent; test graph removed.
+- Narrow populated mobile layouts and keyboard graph/table access verified.
+- Camera diagnostics on real inputs: about 9.2 processed frames/s, 21.1 ms mean landmark inference and 24.1 ms mean analysis processing in one session. These are efficiency measurements, not stress accuracy.
+- Idle-page hidden warning fixed, initialization bounded, and late resources disposed after cancellation/timeout.
+
+### Remaining — 3 groups (inputs or controlled tests required)
+
+1. Obtain authorized labeled rest/stressor videos or explicit consent for local recorded sessions, then run actual M0–M5 comparisons/accuracy/CIs/permutations and optional AU validation. No labeled videos are available locally. The browser check-ins were not recorded and do not supply this protocol.
+2. Controlled low-light/glasses/yaw/multiple-face and denied/busy camera checks; actual tab-background and five-minute automatic-stop checks. Synthetic quality/pose and resource handling tests are distinct from these physical conditions.
+3. Broader CPU/memory/multi-device characterization. Real frame-rate/latency and one synthetic pretrained-backend memory/latency benchmark are complete; per-tab CPU/memory isolation and larger-session measurements are not.
 
 Optional/out of current scope: re-enable/test Gemini guidance with credentials. No training or fine-tuning is planned.
 
@@ -204,7 +210,9 @@ Live webcam verification and live Gemini verification remain pending; they are n
 - [x] Narrow populated history/result layouts and keyboard opening of graph/exact values verified without horizontal page overflow.
 - [x] Fix misleading idle-page hidden error and add bounded initialization with late-resource cleanup. Nine frontend tests passed.
 - [x] Add measured FPS/inference/processing diagnostics for device benchmarking.
-- [ ] Verify these fixes and diagnostic measurements on the updated deployed camera flow.
+- [x] Verify deployment of the idle-camera fix and diagnostics (fe96964); real camera diagnostics measured.
 - [ ] Controlled lighting/glasses/yaw/multiple-face and permission/busy-camera robustness checks.
 - [ ] CPU/memory benchmark and broader multi-session/device characterization.
 - [ ] Obtain authorized labeled videos or explicitly consented recorded sessions, then run actual M0–M5 accuracy evaluation. No training is planned.
+
+See VALIDATION.md for verified checks and remaining input-dependent work. Model B warm synthetic MPS benchmark measured about 33.05 ms/image; this is not a complete real-video CPU/memory benchmark.

@@ -29,3 +29,5 @@ Optional HF extension:
 - Actual model A dummy-image inference passed on MPS at revision eef423100d32c018dac57c333100f4f5f7863fb1.
 - Model B actual fp32/no-grad dummy-image inference passed on MPS at revision 32132bdc0b6c9ad71e47a905db5cdf0ae51de85d after disk space became available.
 - Actual HF metadata report generated at results/hf/metrics.json: both immutable hashes, parameter counts and available license declarations recorded. Real-dataset metrics remain pending; zero labeled videos were evaluated.
+
+Updated browser verification and remaining controlled/data-dependent work are recorded in ../VALIDATION.md and ../TASKS.md. Real camera processing diagnostics were verified after deployment; no labeled video evaluation has occurred.
