@@ -234,4 +234,4 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Remove personal calibration and manual start/finish steps; simplify Results to score and graph.
 - [x] Separate fixed-reference QuickIndex from unchanged offline rest-calibrated evaluation methods.
 - [x] Ten frontend tests pass, including immediate scores with no baseline and invalid-frame rejection.
-- [ ] Real-camera validation of the new 10-second flow (prior 25-second live validation does not cover this change).
+- [x] Real-camera check: automatic 10-second completion, numeric result, Results navigation and stopped camera verified. No video or graph was saved. This checks flow, not stress accuracy.
