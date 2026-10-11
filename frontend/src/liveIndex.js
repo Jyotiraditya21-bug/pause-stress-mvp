@@ -115,7 +115,14 @@ export class QuickIndex {
     const p=Array.from({length:478},()=>[0,0]);
     canonical.indices.forEach((i,n)=>{p[i]=[...canonical.reference[n]];});
     const g=geometry(p),row=Object.fromEntries(['brow_furrow','lip_press','lip_corner','jaw_clench'].map(k=>[k,g[k]]));
-    this.reference=Array.from({length:5},()=>({...row}));
+    const stds={brow_furrow:.06,lip_press:.04,lip_corner:.06,jaw_clench:.08};
+    this.reference=[
+      {...row},
+      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]+stds[k]])),
+      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]-stds[k]])),
+      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]+stds[k]*.5])),
+      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]-stds[k]*.5]))
+    ];
     this.measurements=new ScanReliability(Object.keys(row),r=>new FixedIndex(this.reference).score(r));
   }
   update(time,points,pose,qualityGood,context={}) {

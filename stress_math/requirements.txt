@@ -4,5 +4,8 @@ torch>=2.6,<3
 huggingface_hub>=0.25,<2
 torchvision>=0.21,<1
 pillow>=10
+scipy>=1.11,<1.16
+scikit-learn>=1.4,<1.8
+# Pulse branch (Maaoui et al.) and supervised references use scipy and scikit-learn.
 # Legacy H0/H1 and plots use the existing core numpy/OpenCV/SciPy/Matplotlib deps.
 # No additional model training or GPU-only dependency is required.

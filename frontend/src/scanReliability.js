@@ -39,7 +39,7 @@ export class ScanReliability {
     return slots;
   }
   finish() {
-    const slots=this.usableSlots(),points=[],context=[];
+    const slots=this.usableSlots(),points=[],context=[],featureRows=[];
     for(let window=0;window<9;window++){
       const block=[];
       for(let i=window*5;i<(window+1)*5;i++)if(slots.has(i))block.push(slots.get(i));
@@ -47,6 +47,7 @@ export class ScanReliability {
       if(block.length>=4){
         const row=Object.fromEntries(this.keys.map(k=>[k,median(block.map(s=>s.row[k]))]));
         value=this.score({...row,time:window+1.5});
+        featureRows.push(row);
       }
       context.push(...block.map(s=>s.context));
       points.push({time:window+1.5,value});
@@ -69,8 +70,9 @@ export class ScanReliability {
         }
       }
     }
+    const features=featureRows.length?Object.fromEntries(this.keys.map(k=>[k,median(featureRows.map(r=>r[k]))])):null;
     return {quality:reason?'poor':'good',reason,average:reason?null:median(values),
-      latest:reason?null:points.at(-1).value,points,coveragePercent:100*coverage,
+      latest:reason?null:points.at(-1).value,points,coveragePercent:100*coverage,features,
       reliability:{usableSlots:slots.size,totalSlots:45,usableWindows:values.length,totalWindows:9,
         scoreSpread:spread,halfDifference,ruleVersion:'window-quality-v1'}};
   }

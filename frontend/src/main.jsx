@@ -37,7 +37,21 @@ function App() {
       {screen==='Live'&&<><p className="eyebrow">REAL-TIME FACIAL BEHAVIOR</p><h1>Your 10-second scan.</h1><CameraScan onComplete={completed}/></>}
       {screen==='Results'&&<><p className="eyebrow">SESSION REVIEW</p><h1>Your score.</h1>{result?<>
         <p>{new Date(result.created_at).toLocaleString()} · {Math.round(result.durationSeconds)} seconds</p>
-        <section className="panel"><h2>Stress score</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'Unavailable'}{Number.isFinite(result.average)&&<small> / 10</small>}</p><p>0 = high stress · 10 = no stress</p><p className="fine">{result.quality==='good'?'Experimental estimate from your scan.':(result.reason||'Not enough usable camera frames. Try again with even lighting and your face in view.')}</p></section>
+        <section className="panel"><h2>Facial index</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'Unavailable'}{Number.isFinite(result.average)&&<small> / 10</small>}</p><p><strong>Scale:</strong> 0 = highest tension deviation · 5 = neutral baseline mean · 10 = most relaxed</p><p className="fine">{result.quality==='good'?'Calculated from 10-second facial landmark geometry relative to a generic reference.':(result.reason||'Not enough usable camera frames. Try again with even lighting and your face in view.')}</p></section>
+        {result.quality==='good'&&<section className="panel">
+          <h2>Why scores can vary between scans</h2>
+          <p>A score near 5 corresponds to neutral baseline geometry. Deviations toward 0 occur when facial features contract (e.g., brow furrowing, lip compression, or jaw clenching). Staring at a screen, reading, or mental concentration over 5–10 minutes often introduces unconscious micro-tension or posture shifts.</p>
+          {result.features&&<details>
+            <summary style={{cursor:'pointer',fontWeight:600,padding:'6px 0'}}>View observed landmark geometry</summary>
+            <div style={{marginTop:'12px',fontSize:'13px'}}>
+              <p><strong>Brow furrow distance:</strong> {result.features.brow_furrow > -0.56 ? 'Contracted relative to reference' : 'Neutral / uncontracted'}</p>
+              <p><strong>Lip vertical compression:</strong> {result.features.lip_press > -0.26 ? 'Compressed relative to reference' : 'Neutral / uncompressed'}</p>
+              <p><strong>Jaw width ratio:</strong> {result.features.jaw_clench > 0.92 ? 'Wider than reference (tension)' : 'Neutral / relaxed'}</p>
+              <p><strong>Lip corner angle:</strong> {Math.abs(result.features.lip_corner) > 0.08 ? 'Angled / asymmetrical' : 'Level'}</p>
+              <p className="fine" style={{marginTop:'8px'}}>Experimental geometric coefficients, not clinical or physiological stress measurements.</p>
+            </div>
+          </details>}
+        </section>}
         {result.quality==='good'&&<LiveGraph points={result.points}/>}
         <button className="primary" onClick={()=>navigate('Live')}>Start another session →</button>
       </>:<><p>Finish a live session or choose a saved graph from History.</p><button className="primary" onClick={()=>navigate('Live')}>Open live camera</button></>}</>}

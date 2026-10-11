@@ -246,4 +246,15 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Tighten framing/pose, use face brightness, and require 80% time coverage plus eight usable windows.
 - [x] Withhold contradictory, sparse, drifting-light or drifting-pose scans with a specific retry reason.
 - [x] 19 frontend tests and production build pass; seeded 20-scan synthetic range reduced from 2.750 to 0.310 points without anchoring to previous scores.
+- [x] Stabilize QuickIndex feature variance: calibrate canonical baseline reference dispersion to realistic anatomical ranges to prevent microscopic angular shifts (e.g. lip corner) from plunging scores from 5 to 2.
+- [x] Surface session feature summary, score scale explanation (0 high tension, 5 baseline mean, 10 relaxed), and posture consistency guidance on scan and results screens.
 - [ ] Participant repeatability verification 5–10 minutes apart; fixed reference can still introduce systematic biases. No validated stress accuracy claim.
+
+## Pulse branch extension (Maaoui et al. 2020) — 2026-10-11
+
+- [x] Create `stress_math/pulse_features.py`: skin ROI forehead + cheeks, CIE L*u*v* u* channel (default) and green channel, linear detrending, 4th-order zero-phase Butterworth bandpass (0.65–3.0 Hz), optional CWT cleaning, find_peaks instantaneous HR resampled to 30 Hz, 30 s sliding windows (2 s step), 7 features (`meanHR`, `StdHR`, `DerHR`, `RMSSD`, `LF`, `HF`, `LF/HF`) + `RMSSD_rr`, quality gate (FPS >= 15, valid frames >= 80%, SNR >= 2.0).
+- [x] Implement training-free personal rest baseline (first 25 s), sigma floor `max(raw_sd, 0.05 * abs(mu) + 1e-3)`, z-clip [-3, 3], fixed signs (meanHR +, StdHR +, DerHR +, RMSSD -, HF -, LF +, LF/HF +), 0–100 sigmoid scale.
+- [x] Create `stress_math/supervised_reference.py`: Leave-One-Subject-Out (LOSO) vs. random window split using SVM (RBF) and LDA on the 7 pulse features, standardized inside fold, default hyperparameters; quantifies leakage gap.
+- [x] Create `stress_math/pulse_evaluate.py`: evaluation comparing M0, P, M0+P, H1, H1+P, bootstrap CIs, 1000-shuffle within-subject permutation nulls, Holm correction, Table 2 ablations, and generated plots (`roc_all_methods.png`, `pulse_feature_ablation.png`, `leakage_gap.png`).
+- [x] Create `stress_math/test_pulse.py` with 5 unit tests: (a) synthetic 1.2 Hz sinusoid + noise returns ~72 bpm within 2 bpm, (b) sign and baseline z logic, (c) LOSO subject isolation, (d) quality gates and missing data handling, (e) end-to-end report and plot generation with mandatory disclaimers.
+- [x] Update `stress_math/requirements.txt` (scipy, scikit-learn), `stress_math/README.md`, and packaged source archive. All 29 tests pass.

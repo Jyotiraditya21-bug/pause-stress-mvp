@@ -134,3 +134,70 @@ legacy gaze/jitter features intentionally retain 45-frame windows for parity.
 Feature ablations remove smile relief when smile_lift is removed. H0 extracts
 without gates; comparison masking is applied afterward for fair paired metrics.
 The deployed browser index is unchanged by this offline extension.
+
+## Pulse branch extension (webcam PPG, Maaoui et al. 2020)
+
+Extends `stress_math` with a training-free pulse branch inspired by Maaoui, Bousefsaf & Pruski (2020) webcam PPG stress detection, keeping all prior experimental constraints (subject-cluster bootstrap CIs, 40% coverage exclusion, permutation nulls, Holm correction, no training or label-based parameter tuning).
+
+### Pipeline architecture
+
+1. **Signal extraction (`pulse_features.py`)**:
+   - Skin ROIs: forehead + left cheek + right cheek from MediaPipe Face Mesh landmarks.
+   - Spatial averaging over CIE L\*u\*v\* $u^*$ channel (`cv2.COLOR_BGR2Luv`, default) or green channel (`--rppg-channel green`).
+2. **Filtering**:
+   - Linear detrending, 4th-order zero-phase Butterworth bandpass filter (0.65–3.0 Hz / 39–180 bpm).
+   - Optional continuous-wavelet transform cleaning (`--cwt-cleaning`, default off).
+3. **Pulse rate trace**:
+   - Peak detection via `scipy.signal.find_peaks` with minimum distance derived from 3 Hz ($f_s / 3$).
+   - Instantaneous heart rate = $60 / \text{IBI}$ (seconds), resampled to 30 Hz by linear interpolation.
+4. **Sliding window & 7 physiological features**:
+   - 30 s sliding windows with 2 s step.
+   - Seven features computed per window: `meanHR`, `StdHR`, `DerHR` (mean first difference), `RMSSD` (of HR trace), `LF power` (0.04–0.15 Hz), `HF power` (0.15–0.35 Hz), and `LF/HF` (Welch PSD on zero-mean 30 Hz HR trace).
+   - `RMSSD_rr` computed from discrete inter-beat intervals (in milliseconds) and reported separately.
+5. **Quality gates**:
+   - FPS $\ge 15$, valid face frames in window $\ge 80\%$, spectral peak SNR $\ge 2.0$ in cardiac band.
+   - Failed windows are marked missing (`NaN`), never imputed.
+6. **Training-free scoring**:
+   - Per-subject 25-second rest baseline mean and standard deviation with the existing sigma floor: $\sigma_i = \max(\sigma_{\text{raw}, i}, 0.05 \cdot |\mu_i| + 10^{-3})$.
+   - $z$ clipped to $[-3, 3]$.
+   - Fixed physiological signs: `meanHR` (+), `StdHR` (+), `DerHR` (+), `RMSSD` (-), `HF` (-), `LF` (+), `LF/HF` (+).
+   - Pulse score $P = 100 \cdot \text{sigmoid}(\text{mean}(\text{signed } z))$.
+7. **Methods compared on same windows**:
+   - `M0`: Existing math geometric index
+   - `P`: Training-free pulse-only index
+   - `M0+P`: Equal-weight fusion of per-subject z-scores
+   - `H1`: Harmonized legacy heuristic mesh
+   - `H1+P`: Equal-weight fusion of per-subject z-scores
+   - Permutation null distribution (1000 shuffles within subject) for every method.
+   - Feature ablations: full P, without each of the 7 features, and `time_only` vs `freq_only` groups (mirroring Table 2 of Maaoui et al.).
+8. **Supervised reference (Leakage quantification)**:
+   - Clearly labeled as a comparator reference (NOT our method).
+   - Leave-One-Subject-Out (LOSO) vs. random window split using SVM (RBF) and LDA on the 7 pulse features.
+   - Standardized inside each fold, default hyperparameters ($C=1$, $\gamma=\text{scale}$), no tuning on held-out subject.
+   - Output table: `Method | split | accuracy | AUC | F1` and `leakage_gap.png` quantifying $\Delta = \text{Accuracy}_{\text{random}} - \text{Accuracy}_{\text{LOSO}}$.
+
+### Execution commands
+
+```sh
+# Run complete unit test suite across math, HF comparators, heuristics, and pulse:
+stress_math/.venv/bin/python -m unittest stress_math.test_math stress_math.test_hf stress_math.test_heuristic stress_math.test_pulse -v
+
+# Run pulse evaluation runner (smoke test on synthetic protocol):
+stress_math/.venv/bin/python -m stress_math.pulse_evaluate --smoke-test --output stress_math/results
+
+# Run on authorized dataset with CIE L*u*v* u* channel:
+stress_math/.venv/bin/python -m stress_math.pulse_evaluate --manifest /path/to/sessions.csv --rppg-channel u --output stress_math/results
+
+# Run with alternative green channel and optional CWT cleaning:
+stress_math/.venv/bin/python -m stress_math.pulse_evaluate --manifest /path/to/sessions.csv --rppg-channel green --cwt-cleaning --output stress_math/results
+```
+
+Outputs: `results/metrics.json`, `results/summary.md`, `results/comparison.md`, `results/report.md`, `results/roc_all_methods.png`, `results/pulse_feature_ablation.png`, `results/leakage_gap.png`.
+
+### Scientific disclaimers and limitations
+
+- **Pulse features are camera estimates, not ECG-grade HRV**: rPPG signals measure optical absorption changes, not electrical cardiac depolarizations.
+- **LF from 30 s windows is unreliable**: Standard guidelines require $\ge 1\text{--}2$ minutes to resolve Low Frequency (0.04–0.15 Hz) HRV rhythms; 30 s LF serves as an ultra-short proxy only.
+- **Supervised models are references only**: SVM and LDA exist solely to quantify data leakage from random window splits; they are not proposed as our scoring method.
+- **Labels are task-based**: Stress labels denote experimental tasks, not clinical anxiety, burnout, or medical stress.
+- **No parameters were fitted to test outcomes**: Signs, baseline rules, sigma floors, and quality gates were fixed in advance.

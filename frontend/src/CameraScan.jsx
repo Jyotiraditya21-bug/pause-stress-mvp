@@ -125,7 +125,8 @@ export default function CameraScan({onComplete}) {
   return <>
     <section className="panel">
       <h2>10-second camera scan</h2>
-      <p>Look at the camera for 10 seconds. Your score opens automatically. Video stays in your browser.</p>
+      <p>Look at the camera for 10 seconds with a relaxed, neutral expression. Your score opens automatically. Video stays in your browser.</p>
+      <p className="fine">Tip: For repeatable readings across sessions, keep your head at eye level, relax your brow and jaw, and face the camera directly.</p>
       <div className={`scan-stage ${state==='scanning'?'is-scanning':''} ${state==='loading'?'is-loading':''}`}>
         <div className="scan-orbit" style={{'--scan-duration':`${SCAN_SECONDS}s`}}>
           <svg className="scan-progress" viewBox="0 0 320 320" aria-hidden="true"><circle className="scan-track" cx="160" cy="160" r="153"/><circle className="scan-fill" cx="160" cy="160" r="153"/></svg>
