@@ -235,3 +235,5 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Separate fixed-reference QuickIndex from unchanged offline rest-calibrated evaluation methods.
 - [x] Ten frontend tests pass, including immediate scores with no baseline and invalid-frame rejection.
 - [x] Real-camera check: automatic 10-second completion, numeric result, Results navigation and stopped camera verified. No video or graph was saved. This checks flow, not stress accuracy.
+
+- [x] Circular camera preview, 10-second animated progress ring, scan sweep/grid and pulsing dots; reduced-motion support. Scan text reads “Scanning your face…”. Production build and idle browser preview verified; scan timing/result flow preserved.

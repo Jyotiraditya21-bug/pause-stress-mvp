@@ -132,16 +132,18 @@ export default function CameraScan({onComplete}) {
     <section className="panel">
       <h2>10-second camera scan</h2>
       <p>Look at the camera for 10 seconds. Your score opens automatically. Video stays in your browser.</p>
-      <div className="live-layout"><div>
-        <div className="camera"><video ref={video} autoPlay playsInline muted/><canvas ref={overlay} aria-hidden="true"/>{!active&&<div className="camera-placeholder">Camera stopped</div>}</div>
-        <p role="status" className={good?'quality good':'quality'}>{state==='loading'?'Starting camera and facial analysis…':active?feedback:'Face the camera with even lighting and only one person in view.'}</p>
-      </div><div className="live-reading">
-        <p className="eyebrow">10-SECOND SCAN</p>
-        <p className="rating">{state==='scanning'?Math.max(0,SCAN_SECONDS-seconds):SCAN_SECONDS}<small> seconds</small></p>
-        <p>{state==='scanning'?`${Math.max(0,SCAN_SECONDS-seconds)} seconds remaining`:'Ready for a 10-second scan.'}</p>
-
-        <p className="fine">Experimental facial estimate, not a validated stress measurement.</p>
-      </div></div>
+      <div className={`scan-stage ${state==='scanning'?'is-scanning':''} ${state==='loading'?'is-loading':''}`}>
+        <div className="scan-orbit" style={{'--scan-duration':`${SCAN_SECONDS}s`}}>
+          <svg className="scan-progress" viewBox="0 0 320 320" aria-hidden="true"><circle className="scan-track" cx="160" cy="160" r="153"/><circle className="scan-fill" cx="160" cy="160" r="153"/></svg>
+          <div className="camera circle-camera"><video ref={video} autoPlay playsInline muted/><canvas ref={overlay} aria-hidden="true"/>
+            {state==='scanning'&&<><div className="scan-sweep" aria-hidden="true"/><div className="scan-grid" aria-hidden="true"/></>}
+            {!active&&<div className="camera-placeholder"><span className="face-outline" aria-hidden="true">◎</span><span>Position your face here</span></div>}
+          </div>
+        </div>
+        <p className="scan-title" role="status">{state==='scanning'?'Scanning your face…':state==='loading'?'Preparing your scan…':'Ready when you are'}</p>
+        {state==='scanning'&&<><div className="scan-dots" aria-hidden="true"><i/><i/><i/></div><p className="scan-countdown">{Math.max(0,SCAN_SECONDS-seconds)} seconds remaining</p></>}
+        <p className={good?'quality good':'quality'}>{state==='loading'?'Starting camera…':active?feedback:'Look straight ahead with even lighting.'}</p>
+      </div>
       {error&&<p role="alert" className="camera-error">{error}</p>}
       {!active&&<><button className="primary" onClick={start}>Start 10-second scan</button><p className="fine">By starting, you allow local camera processing for this scan.</p></>}
       {active&&<button className="secondary" onClick={()=>{stop();setState('idle');setReading(null);setSeconds(0);setPoints([]);}}>Cancel and stop camera</button>}
