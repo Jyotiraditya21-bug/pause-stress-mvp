@@ -75,3 +75,8 @@ Core MVP implementation is ready. See DEMO.md for camera-free and optional camer
 ## Current browser UI
 
 The questionnaire rating flow has been replaced by a live, experimental facial behavior graph with 25-second calibration. See frontend/LIVE.md for the fixed rules, reversed scale, privacy and verification limits. This is not a validated stress measurement.
+
+The offline experiment also supports `--legacy-heuristics` for the supplied
+24-feature H0/H1 port, fixed fusions, task splits, and ablations. Combine it with
+`--hf-models` for the complete pretrained comparison. See
+[stress_math run commands](stress_math/README.md#legacy-heuristic-comparison-fixed-no-training).

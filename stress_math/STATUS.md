@@ -31,3 +31,6 @@ Optional HF extension:
 - Actual HF metadata report generated at results/hf/metrics.json: both immutable hashes, parameter counts and available license declarations recorded. Real-dataset metrics remain pending; zero labeled videos were evaluated.
 
 Updated browser verification and remaining controlled/data-dependent work are recorded in ../VALIDATION.md and ../TASKS.md. Real camera processing diagnostics were verified after deployment; no labeled video evaluation has occurred.
+
+Legacy extension (2026-10-11): supplied source copied unchanged to legacy/face_stress_mesh.py; headless H0/H1, fixed F1/F2, retained M0–M5 and math baselines, fixed ablations, UBFC task splits, manifest-only robustness and skin-tone groups, subject-bootstrap Holm comparisons, and requested plots/reports implemented. The 300-frame feature regression passes within 1e-6. Time-based score EMA is tested across 15/30/60fps; legacy 45-frame feature buffers intentionally remain frame-based. Full-rate gating and shared 5fps coverage are both reported; either below 40% excludes a video. Real labeled predictive evaluation remains pending (no authorized videos supplied).
+Final verification: 24/24 Python tests passed with optional dependencies. Legacy source byte comparison passed. CLI help and no-dataset report/plot generation passed; existing module entry points remain compatible.

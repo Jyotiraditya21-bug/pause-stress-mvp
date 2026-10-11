@@ -4,3 +4,5 @@ torch>=2.6,<3
 huggingface_hub>=0.25,<2
 torchvision>=0.21,<1
 pillow>=10
+# Legacy H0/H1 and plots use the existing core numpy/OpenCV/SciPy/Matplotlib deps.
+# No additional model training or GPU-only dependency is required.

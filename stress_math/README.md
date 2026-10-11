@@ -88,3 +88,49 @@ Model names, resolved revision hashes, full repository license text when present
 Weights total roughly 687 MB for the two fp32 ViTs, in addition to Python libraries/caches and dataset storage. Use a cache on a disk with enough space. Local videos/crops are never uploaded for inference. The dummy-image smoke CLI downloads real pretrained weights; the unit dummy-image test uses a fixed test-only classifier with the real AutoImageProcessor and torch, and does not establish pretrained accuracy.
 
 This optional Python comparator path is not included in the browser live score or executed on GitHub Pages.
+
+## Legacy heuristic comparison (fixed, no training)
+
+The supplied `legacy/face_stress_mesh.py` is preserved byte-for-byte. Run the
+headless experiment from the repository root with Python 3.11/3.12:
+
+```sh
+stress_math/.venv/bin/python -m pip install -r stress_math/requirements-core.txt
+stress_math/.venv/bin/python -m stress_math.evaluate --legacy-heuristics --dataset ubfc_phys --root /path/to/authorized/UBFC-Phys --output stress_math/results/legacy
+# Optional pretrained M1–M5 and F2; installs dependencies but never trains:
+stress_math/.venv/bin/python -m pip install -r stress_math/requirements.txt
+stress_math/.venv/bin/python -m stress_math.evaluate --legacy-heuristics --hf-models --manifest /path/to/sessions.csv --output stress_math/results/legacy_hf
+stress_math/.venv/bin/python -m unittest stress_math.test_math stress_math.test_hf stress_math.test_heuristic -v
+```
+
+Without `--hf-models`, M0/H0/H1/F1 and ablations run without Transformers;
+pretrained methods are explicitly unavailable. With the flag, every comparator
+uses the same complete-case 5fps frames and videos. Existing evaluation commands
+and module APIs continue to work. The unchanged legacy camera script requires
+MediaPipe and opens a camera only when explicitly executed as a script; it is
+never imported by the port or evaluator.
+
+Manifest required columns: `video_path,subject_id,label,dataset`. Optional:
+`baseline_video_path,start_seconds,end_seconds,condition,task,skin_tone`.
+For UBFC use `task=T1|T2|T3` when `condition` describes `normal`, `low_light`,
+`glasses`, `yaw_plus15`, or `yaw_minus15`; standard UBFC filenames also identify
+these tasks. Only actually supplied condition/skin-tone metadata is analyzed.
+No skin tone is inferred. When the video is its own rest baseline, evaluation
+starts no earlier than 25 seconds even if an earlier segment start is supplied.
+
+Outputs: `metrics.json`, `comparison.md`, `report.md`, one-table `summary.md`,
+`group_ablation.png`, `task_split_auc.png`, `roc_all_methods.png`. JSON includes
+all primary bootstrap intervals, secondary threshold metrics, per-video and
+per-label coverage, speaking-gate percentages, excluded and failed videos,
+1000-shuffle null distributions, Holm-adjusted pairwise AUC differences, model
+provenance/licenses/parameter counts, correlations and feature ablations.
+Existing single-feature and no-rPPG math baselines are retained on the same
+comparison cohort. Missing videos produce unavailable metrics, not results.
+
+H0/H1 weights/scales are unvalidated engineering priors. Texture/colour depends
+on lighting and skin tone; mouth features depend on speech; task labels are
+not clinical stress measurements. The 0.316-second EMA is time-based, but the
+legacy gaze/jitter features intentionally retain 45-frame windows for parity.
+Feature ablations remove smile relief when smile_lift is removed. H0 extracts
+without gates; comparison masking is applied afterward for fair paired metrics.
+The deployed browser index is unchanged by this offline extension.

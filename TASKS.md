@@ -216,3 +216,14 @@ Live webcam verification and live Gemini verification remain pending; they are n
 - [ ] Obtain authorized labeled videos or explicitly consented recorded sessions, then run actual M0–M5 accuracy evaluation. No training is planned.
 
 See VALIDATION.md for verified checks and remaining input-dependent work. Model B warm synthetic MPS benchmark measured about 33.05 ms/image; this is not a complete real-video CPU/memory benchmark.
+
+## Legacy heuristic extension — 2026-10-11
+
+- [x] Preserve supplied legacy camera script unchanged; deterministic headless 24-feature port.
+- [x] H0 original calibration and H1 rest/pose/expression harmonization; time-based EMA.
+- [x] Keep existing M0–M5; add H0/H1/F1/F2 and retain math baselines.
+- [x] Group/per-feature/mouth ablations; task splits and speaking-gate coverage.
+- [x] Paired subject-bootstrap comparisons with Holm correction; condition and provided-only skin-tone analysis.
+- [x] JSON/Markdown reports and three requested plots; documented run commands.
+- [ ] Run real labeled-video evaluation: authorized rest/task videos are still required. Synthetic regression is not accuracy evidence.
+- Verification: all 24 Python tests passed in the optional Torch/Transformers environment, including byte-compatible feature-table checks, 300-frame parity, real synthetic-video decoding, both HF-enabled/disabled report paths, 36%/40% exclusion boundary, and time-based EMA equivalence. Reports generated locally with zero real labeled sessions; no predictive accuracy claimed.
