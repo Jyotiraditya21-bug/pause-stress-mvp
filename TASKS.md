@@ -29,6 +29,8 @@ Current MVP: a deployed live experimental facial index, not an entered stress ra
 - Narrow populated mobile layouts and keyboard graph/table access verified.
 - Camera diagnostics on real inputs: about 9.2 processed frames/s, 21.1 ms mean landmark inference and 24.1 ms mean analysis processing in one session. These are efficiency measurements, not stress accuracy.
 - Idle-page hidden warning fixed, initialization bounded, and late resources disposed after cancellation/timeout.
+- Experiment tab blank screen resolved: added missing `React` import to `frontend/src/Experiment.jsx` and added top-level `ErrorBoundary` in `frontend/src/main.jsx`.
+- Verified live deployment at https://jyotiraditya21-bug.github.io/pause-stress-mvp/: navigation to Experiment view successfully renders headings, instructions, and download links with zero console errors.
 
 ### Remaining — 3 groups (inputs or controlled tests required)
 
