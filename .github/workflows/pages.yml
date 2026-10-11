@@ -29,8 +29,6 @@ jobs:
         working-directory: frontend
       - run: npm test
         working-directory: frontend
-      - name: Package local experiment
-        run: python3 stress_math/package_site.py
       - run: npm run build
         working-directory: frontend
         env:

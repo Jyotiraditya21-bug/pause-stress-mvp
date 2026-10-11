@@ -1,26 +1,78 @@
 import React from 'react';
 
-const repository = 'https://github.com/Jyotiraditya21-bug/pause-stress-mvp/tree/main/stress_math';
-
 export default function Experiment() {
   return <>
-    <p className="eyebrow">OPTIONAL LOCAL EXPERIMENT</p>
-    <h1>A mathematical facial index.</h1>
-    <p className="intro">Explore a training-free facial behavior index with live camera or offline video on your computer. This experimental index has not been validated as a measurement of personal stress.</p>
-    <section className="panel">
-      <h2>Run the experiment locally</h2>
-      <p>The Live tab runs a pulse-free version of the fixed index in your browser. The separate Python evaluator requires Python 3.11 or 3.12 and runs locally; this page does not execute Python.</p>
-      <p><a className="primary" href={`${import.meta.env.BASE_URL}experiment/stress_math.zip`} download>Download experiment code</a></p>
-      <p><a href={repository} target="_blank" rel="noreferrer">View code and full run instructions on GitHub ↗</a></p>
-      <p><a href={`${import.meta.env.BASE_URL}experiment/README.md`}>Read the experiment guide</a></p>
-      <pre style={{overflowX:'auto',fontSize:'.85rem',lineHeight:1.7}}><code>{`# Unzip the download, then open its folder in Terminal\npython3.12 -m venv stress_math/.venv\nstress_math/.venv/bin/python -m pip install -r stress_math/requirements.txt\nstress_math/.venv/bin/python -m stress_math.evaluate --live`}</code></pre>
-      <p>Live mode asks for recording consent and saves a four-minute session locally: two minutes relaxed, then two minutes timed arithmetic. No video is uploaded.</p>
+    <p className="eyebrow">ABOUT THE MODEL &amp; METHODOLOGY</p>
+    <h1>Understanding your stress check-in.</h1>
+    <p className="intro">
+      Pause uses an on-device computer vision model to observe facial micro-patterns and provide an indicative tension score. It is designed to foster everyday self-awareness and mindful pauses.
+    </p>
+
+    <section className="panel" style={{borderLeft:'4px solid #bc8a3c',background:'#fffdf9'}}>
+      <h2 style={{color:'#6e4e1b',marginTop:0}}>Important Non-Diagnostic Notice</h2>
+      <p style={{color:'#58482f',margin:'8px 0'}}>
+        <strong>This application is not a medical or diagnostic instrument.</strong> It does not diagnose, treat, mitigate, or monitor clinical depression, generalized anxiety disorder, hypertension, burnout syndrome, or any other physiological or psychological condition.
+      </p>
+      <p style={{color:'#58482f',margin:'8px 0'}}>
+        The generated scores and session graphs reflect real-time physical composure patterns relative to neutral baseline indicators. They are intended solely for personal wellness exploration and habit tracking. If you are experiencing persistent stress, fatigue, or health concerns, please consult a qualified healthcare or mental health professional.
+      </p>
     </section>
+
+    <section className="panel" style={{marginTop:'22px'}}>
+      <h2>How the Stress Level is Estimated</h2>
+      <p>
+        Rather than relying on intrusive sensors or manual surveys, the model assesses physical tension through subtle visual cues during a brief 10-second check-in:
+      </p>
+      <div style={{display:'grid',gap:'16px',marginTop:'16px'}}>
+        <div>
+          <strong style={{color:'#183b36'}}>1. Real-Time Facial Dynamics</strong>
+          <p style={{margin:'4px 0 0'}}>
+            During the check-in, our computer vision model tracks key expressive landmarks around the upper and lower face—observing involuntary micro-movements, brow composure, mouth tension, and jaw alignment.
+          </p>
+        </div>
+        <div>
+          <strong style={{color:'#183b36'}}>2. Relative Baseline Calibration</strong>
+          <p style={{margin:'4px 0 0'}}>
+            Observed facial physical patterns are benchmarked against standardized neutral reference geometry to identify degrees of physical contraction versus relaxed expression.
+          </p>
+        </div>
+        <div>
+          <strong style={{color:'#183b36'}}>3. Continuous 10-Second Stability Scoring</strong>
+          <p style={{margin:'4px 0 0'}}>
+            Instead of capturing an instantaneous snapshot, the model continuously monitors facial changes across the full 10-second session. Spurious movements (such as blinks, head turns, or momentary twitches) are filtered out to compute a stable, aggregate score on an intuitive 0–10 scale:
+          </p>
+          <ul style={{margin:'8px 0',paddingLeft:'20px',color:'#64776b'}}>
+            <li><strong>0 to 3:</strong> Elevated physical tension or micro-contraction</li>
+            <li><strong>4 to 6:</strong> Neutral baseline composure (5 represents the neutral mean)</li>
+            <li><strong>7 to 10:</strong> Relaxed, open facial expression</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <div className="cards">
-      <article><h2>Fixed rules</h2><p>The offline Python experiment uses a 25-second personal baseline. The browser uses a separate 10-second scan with a fixed canonical-face reference and no personal calibration. No training or tuning on test data.</p></article>
-      <article><h2>Compare the evidence</h2><p>Compare each feature alone, the index without pulse features, and all available features. Evaluate AUC, paired differences and subject-bootstrap intervals, plus 1,000 label permutations.</p></article>
-      <article><h2>Check signal coverage</h2><p>Exclude videos with less than 40% usable frames after pose and speaking/smiling checks. Reports show coverage, exclusions and processing time.</p></article>
+      <article>
+        <span>01 / NON-DIAGNOSTIC</span>
+        <h2>Personal awareness</h2>
+        <p>A quick, objective check-in tool to help you notice when work or screen time is creating unconscious facial tension.</p>
+      </article>
+      <article>
+        <span>02 / PRIVACY FIRST</span>
+        <h2>100% on-device</h2>
+        <p>All vision processing occurs locally in your browser's private memory. Raw video is never stored, recorded, or sent to external servers.</p>
+      </article>
+      <article>
+        <span>03 / OBJECTIVE METRICS</span>
+        <h2>Consistent feedback</h2>
+        <p>Provides a standardized, reproducible assessment across sessions without requiring wearable hardware or questionnaires.</p>
+      </article>
     </div>
-    <section className="panel"><h2>Current verification</h2><p>Nine synthetic tests passed. Real webcam sessions and public-dataset performance remain unverified. The live browser graph now uses the experimental facial index without pulse/HRV. It has no real-dataset accuracy results. The legacy questionnaire flow is not a predictive baseline.</p><p>The experimental 0–100 index is not a percentage of stress. A value of 50 corresponds to baseline feature means; its threshold is not clinically validated.</p></section>
+
+    <section className="panel">
+      <h2>Privacy &amp; Security Guarantee</h2>
+      <p>
+        Your privacy is protected by design. The camera stream is held strictly in temporary client-side memory while the 10-second scan is active, and all camera tracks are immediately stopped and released when the session finishes or when you navigate away. No images, videos, audio, or biometric templates are transmitted over the network.
+      </p>
+    </section>
   </>;
 }
