@@ -86,3 +86,9 @@ test('quick scan needs a complete stable acquisition but no personal baseline',a
   for(let i=0;i<100;i++)second.update(i/10,changed,[0,0,0],true);
   assert.notEqual(second.finish().average,scan.finish().average);
 });
+
+test('insufficient scan reports the actual camera rejection reason',async()=>{
+  const {QuickIndex}=await import('./liveIndex.js');const scan=new QuickIndex();
+  for(let i=0;i<100;i++)scan.update(i/10,[],null,false,{qualityReason:'Only one person should be in view.'});
+  const result=scan.finish();assert.equal(result.average,null);assert.match(result.reason,/Only one person/);
+});

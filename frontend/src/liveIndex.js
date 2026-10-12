@@ -124,6 +124,7 @@ export class QuickIndex {
       Object.fromEntries(Object.keys(row).map(k=>[k,row[k]-stds[k]*.5]))
     ];
     this.measurements=new ScanReliability(Object.keys(row),r=>new FixedIndex(this.reference).score(r));
+    this.rejections={};
   }
   update(time,points,pose,qualityGood,context={}) {
     let row=null,reason='';
@@ -134,9 +135,21 @@ export class QuickIndex {
         if(row.mar>.32){row=null;reason='Keep your mouth relaxed and avoid speaking.';}
       } catch {row=null;}
     } else if(qualityGood)reason='Face straight ahead for a repeatable scan.';
+    if(!row&&time>=1){
+      reason=reason||context.qualityReason||'The face could not be tracked clearly.';
+      this.rejections[reason]=(this.rejections[reason]||0)+1;
+    }
     this.measurements.add(time,row,{...context,pitch:pose?.[0],yaw:pose?.[1]});
     // The score is calculated once from independent time windows at completion.
     return {value:null,phase:'live',valid:!!row,reason};
   }
-  finish(){return this.measurements.finish();}
+  finish(){
+    const result=this.measurements.finish();
+    result.reliability.rejectionReasons={...this.rejections};
+    if(result.average===null&&result.reason.startsWith('Not enough clear')){
+      const top=Object.entries(this.rejections).sort((a,b)=>b[1]-a[1])[0];
+      if(top)result.reason=top[0]+' Then retry the 10-second scan.';
+    }
+    return result;
+  }
 }

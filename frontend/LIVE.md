@@ -64,3 +64,19 @@ face geometry with seeded tracking noise and startup perturbations produced a
 with v2; all twenty were accepted. This is a specific synthetic regression,
 not an estimate of human performance, cross-device stability, or stress accuracy.
 Real repeat scans 5–10 minutes apart still require participant verification.
+
+## Unavailable-result correction — 2026-10-12
+
+Ordinary pose/lighting variation is now a lower-confidence warning when the
+geometric readings remain consistent, rather than an unconditional score veto.
+Window consensus requires at least three and 60% of available windows within
+one point of the scan median, with support in both early and late parts of the
+scan and <=0.75 early/late consensus difference. Isolated outlier windows are
+excluded from the final median. This uses only the current scan.
+
+Existing minimum acquisition coverage (35%, at least three windows) remains;
+80% coverage/eight windows identifies higher quality. Limited-quality usable
+results display their score and graph with the warning. No-face, severely
+contradictory, or insufficient scans still withhold numbers and show the actual
+most frequent frame-rejection reason when available. Validation uses synthetic
+regressions, not a claim of real stress accuracy or guaranteed retest stability.

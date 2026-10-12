@@ -96,7 +96,7 @@ export default function CameraScan({onComplete}) {
         if(r.scan) {
           const elapsed=(now-r.scan.start)/1000;
           const xy=landmarks?.map(p=>[p.x*v.videoWidth,p.y*v.videoHeight])||[];
-          const observation=r.scan.index.update(elapsed,xy,pose,quality.good,{brightness});
+          const observation=r.scan.index.update(elapsed,xy,pose,quality.good,{brightness,qualityReason:quality.reason});
           setSeconds(Math.floor(elapsed));setPhase(observation.phase);setReading(observation.value);
           if(observation.reason)setFeedback(observation.reason);
           if(observation.phase==='failed'){stop();setState('idle');setError(observation.reason);return;}

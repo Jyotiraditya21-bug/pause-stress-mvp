@@ -37,7 +37,7 @@ function App() {
       {screen==='Live'&&<><p className="eyebrow">REAL-TIME FACIAL BEHAVIOR</p><h1>Your 10-second scan.</h1><CameraScan onComplete={completed}/></>}
       {screen==='Results'&&<><p className="eyebrow">SESSION REVIEW</p><h1>Your score.</h1>{result?<>
         <p>{new Date(result.created_at).toLocaleString()} · {Math.round(result.durationSeconds)} seconds</p>
-        <section className="panel"><h2>Facial index</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'Unavailable'}{Number.isFinite(result.average)&&<small> / 10</small>}</p><p><strong>Scale:</strong> 0 = highest tension deviation · 5 = neutral baseline mean · 10 = most relaxed</p><p className="fine">{result.quality==='good'?'Calculated from 10-second on-device facial pattern analysis relative to a neutral baseline.':(result.reason||'Not enough usable camera frames. Try again with even lighting and your face in view.')}</p></section>
+        <section className="panel"><h2>Facial index</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'Scan incomplete'}{Number.isFinite(result.average)&&<small> / 10</small>}</p><p><strong>Scale:</strong> 0 = highest tension deviation · 5 = neutral baseline mean · 10 = most relaxed</p><p className="fine">{result.quality==='good'?'Calculated from 10-second on-device facial pattern analysis relative to a neutral baseline.':(result.reason||'Not enough usable camera frames. Try again with even lighting and your face in view.')}</p></section>
         {result.quality==='good'&&<section className="panel">
           <h2>Why scores can vary between scans</h2>
           <p>A score near 5 corresponds to neutral baseline composure. Scores moving toward 0 reflect subtle facial contraction (such as brow furrowing, lip compression, or jaw tightening). Engaging in focused screen work or reading over 5–10 minutes commonly introduces subconscious micro-tension or posture shifts.</p>
@@ -52,7 +52,7 @@ function App() {
             </div>
           </details>}
         </section>}
-        {result.quality==='good'&&<LiveGraph points={result.points}/>}
+        {Number.isFinite(result.average)&&<LiveGraph points={result.points}/>}
         <button className="primary" onClick={()=>navigate('Live')}>Start another session →</button>
       </>:<><p>Finish a live session or choose a saved graph from History.</p><button className="primary" onClick={()=>navigate('Live')}>Open live camera</button></>}</>}
       {screen==='History'&&<><p className="eyebrow">SAVED CAMERA SESSIONS</p><h1>Your previous graphs.</h1><section className="panel"><h2>{sessions.length?sessions.length+' saved sessions':'No camera sessions saved yet'}</h2>{sessions.map(s=><div className="history-row" key={s.id}><div><strong>{Number.isFinite(s.average)?s.average.toFixed(1)+'/10 · average index':'Insufficient signal coverage'}</strong><p>{new Date(s.created_at).toLocaleString()} · {s.coveragePercent.toFixed(0)}% coverage</p></div><div><button className="secondary" onClick={()=>{setResult(s);navigate('Results');}}>View graph</button><button className="secondary" onClick={()=>remove(s.id)}>Delete</button></div></div>)}{!sessions.length&&<button className="primary" onClick={()=>navigate('Live')}>Start a live session</button>}</section></>}

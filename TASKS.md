@@ -260,3 +260,10 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Create `stress_math/pulse_evaluate.py`: evaluation comparing M0, P, M0+P, H1, H1+P, bootstrap CIs, 1000-shuffle within-subject permutation nulls, Holm correction, Table 2 ablations, and generated plots (`roc_all_methods.png`, `pulse_feature_ablation.png`, `leakage_gap.png`).
 - [x] Create `stress_math/test_pulse.py` with 5 unit tests: (a) synthetic 1.2 Hz sinusoid + noise returns ~72 bpm within 2 bpm, (b) sign and baseline z logic, (c) LOSO subject isolation, (d) quality gates and missing data handling, (e) end-to-end report and plot generation with mandatory disclaimers.
 - [x] Update `stress_math/requirements.txt` (scipy, scikit-learn), `stress_math/README.md`, and packaged source archive. All 29 tests pass.
+
+## Repeated Unavailable results — 2026-10-12
+
+- [x] Make pose/lighting variability advisory when usable window measurements agree.
+- [x] Filter isolated outlier windows; preserve rejection of contradictory scan halves and missing faces.
+- [x] Display limited-quality scores/graphs with warnings; provide specific dominant rejection instructions for failed acquisition.
+- [x] Production build and regression tests cover normal variation, outliers, multiple-face failure and no-data rejection.
