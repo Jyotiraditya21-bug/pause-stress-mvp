@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from .core import geometry, normalize, pulse, INDICES
 
-VERSION='math-1.2-raw'
+VERSION='math-1.3-raw-count'
 SOURCE_HASH=hashlib.sha256(Path(__file__).read_bytes()+Path(__file__).with_name('core.py').read_bytes()).hexdigest()
 def pose(p,shape):
     h,w=shape[:2]
@@ -38,33 +38,35 @@ def extract(path,cache):
         with np.load(target,allow_pickle=False) as data: return {k:data[k] for k in data.files}
     cap=cv2.VideoCapture(str(path)); fps=cap.get(cv2.CAP_PROP_FPS)
     if not cap.isOpened() or fps<=0: cap.release(); raise ValueError(f'Cannot decode video: {path}')
-    times=[]; landmarks=[]; raw_landmarks=[]; angles=[]; greens=[]; brightness=[]; start=time.perf_counter(); i=0
-    with mp.solutions.face_mesh.FaceMesh(max_num_faces=1,refine_landmarks=True,min_detection_confidence=.5,min_tracking_confidence=.5) as mesh:
+    times=[]; landmarks=[]; raw_landmarks=[]; angles=[]; greens=[]; brightness=[]; face_counts=[]; start=time.perf_counter(); i=0
+    with mp.solutions.face_mesh.FaceMesh(max_num_faces=2,refine_landmarks=True,min_detection_confidence=.5,min_tracking_confidence=.5) as mesh:
         while True:
             ok,frame=cap.read()
             if not ok: break
             times.append(i/fps); i+=1
             result=mesh.process(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))
             p=np.full((478,3),np.nan); raw=p.copy(); a=np.full(3,np.nan); g=np.nan
+            face_counts.append(len(result.multi_face_landmarks or []))
             if result.multi_face_landmarks:
                 h,w=frame.shape[:2]
                 p=np.array([(v.x*w,v.y*h,v.z*w) for v in result.multi_face_landmarks[0].landmark])
                 raw=p.copy()
                 a=pose(p,frame.shape)
                 if a is None: a=np.full(3,np.nan)
-                if np.all(np.isfinite(a)) and max(abs(a[0]),abs(a[1]))<=35: g=green_roi(frame,p)
+                if len(result.multi_face_landmarks)==1 and np.all(np.isfinite(a)) and max(abs(a[0]),abs(a[1]))<=35: g=green_roi(frame,p)
                 else: p[:]=np.nan
             landmarks.append(p); raw_landmarks.append(raw); angles.append(a); greens.append(g); brightness.append(frame.mean())
     cap.release()
-    data=dict(times=np.array(times),landmarks=np.array(landmarks),raw_landmarks=np.array(raw_landmarks),pose=np.array(angles),green=np.array(greens),brightness=np.array(brightness),fps=np.array(fps),ms_frame=np.array((time.perf_counter()-start)*1000/max(i,1)))
+    data=dict(times=np.array(times),landmarks=np.array(landmarks),raw_landmarks=np.array(raw_landmarks),pose=np.array(angles),green=np.array(greens),brightness=np.array(brightness),face_counts=np.array(face_counts),fps=np.array(fps),ms_frame=np.array((time.perf_counter()-start)*1000/max(i,1)))
     np.savez_compressed(target,**data)
     return data
 
 def features(data):
     rows=[]; window=deque(); blink_events=deque(); green=deque(); closed=None; previous=None
-    for t,p,a,g in zip(data['times'],data['landmarks'],data['pose'],data['green']):
+    counts=data.get('face_counts',np.ones(len(data['times']),dtype=int))
+    for t,p,a,g,face_count in zip(data['times'],data['landmarks'],data['pose'],data['green'],counts):
         row={'time':float(t)}
-        if not np.isfinite(p).all(): rows.append(row); previous=None; closed=None; continue
+        if face_count!=1 or not np.isfinite(p).all(): rows.append(row); previous=None; closed=None; continue
         f=geometry(p); q=normalize(p)[list(INDICES)]
         if f['ear']<.2:
             if closed is None: closed=t

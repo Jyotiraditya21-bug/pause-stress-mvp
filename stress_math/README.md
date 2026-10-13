@@ -201,3 +201,38 @@ Outputs: `results/metrics.json`, `results/summary.md`, `results/comparison.md`, 
 - **Supervised models are references only**: SVM and LDA exist solely to quantify data leakage from random window splits; they are not proposed as our scoring method.
 - **Labels are task-based**: Stress labels denote experimental tasks, not clinical anxiety, burnout, or medical stress.
 - **No parameters were fitted to test outcomes**: Signs, baseline rules, sigma floors, and quality gates were fixed in advance.
+
+## Deployed 10-second mirror and evaluation
+
+The browser quick scan uses a fixed generic reference; it does not calibrate against the participant. `deployed_mirror.py` ports its face geometry, acquisition checks, per-window index and scan reliability rules. The parity test invokes Node against the JavaScript source and compares a deterministic fixture derived from the same canonical-reference construction used in `frontend/src/liveIndex.test.js`:
+
+```sh
+stress_math/.venv/bin/python -m unittest stress_math.test_deployed_mirror -v
+```
+
+Run the deployed-algorithm dataset evaluation (CPU MediaPipe task model is included in the frontend assets):
+
+```sh
+stress_math/.venv/bin/python -m stress_math.evaluate_deployed --root /path/to/UBFC-Phys --output stress_math/results/deployed
+stress_math/.venv/bin/python -m stress_math.evaluate_deployed --manifest /path/to/sessions.csv --output stress_math/results/deployed
+```
+
+The manifest uses `video_path,subject_id,label,dataset`; task may be `T1`, `T2`, or `T3`, and a task video should set `baseline_video_path` to the subject's separate T1 rest video. The evaluator samples ten-second clips without overlap, removes the first second inside each clip, applies the deployed acceptance rules, and reports D0 generic reference, D1 rest-personalized four-feature index, and D2 within-clip feature variance. T1 clips overlapping the first 25 seconds are unavailable for D1 so its baseline does not also serve as its test data. Nuisance analysis reprocesses the same source clips and can be computationally expensive.
+
+The main output is `metrics.json`, `report.md` and `face_shape_confound.png`. AUC uses stress-oriented direction (D0/D1 are inverted for the comparison only); displayed scores retain the application's 0-high-deviation, 10-relaxed direction. Task labels are not clinical stress labels. No parameters are fitted on test videos.
+
+## Own-session repeatability
+
+Prepare a CSV with `subject_id,session_id,day,condition,score,self_report`; use condition values `rest`, `arithmetic` and `speech` (or T1/T3/T2). Each row represents one completed scan. Run:
+
+```sh
+stress_math/.venv/bin/python -m stress_math.repeatability --manifest /path/to/repeats.csv --metrics stress_math/results/deployed/metrics.json --output stress_math/results/repeatability
+```
+
+The report includes within-condition SD/SEM/MDC95, ICC(2,1), score/self-report repeated-measures correlation, Bland–Altman plot, and the fixed PASS/FAIL criteria. It calculates within-subject AUC from the supplied session CSV; nuisance evidence comes from a deployed evaluation whose records include every subject in the repeatability manifest. A different cohort is rejected. Missing required evidence results in FAIL, rather than a pass based on partial data. Run the related unit tests with:
+
+```sh
+stress_math/.venv/bin/python -m unittest stress_math.test_deployed_mirror stress_math.test_validation_tools stress_math.test_pulse -v
+```
+
+`requirements-core.txt` already contains the needed NumPy, OpenCV, MediaPipe, SciPy, scikit-learn, pandas and Matplotlib dependencies. Use the project's recommended Python 3.11 or 3.12 environment.

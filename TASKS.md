@@ -267,3 +267,18 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Filter isolated outlier windows; preserve rejection of contradictory scan halves and missing faces.
 - [x] Display limited-quality scores/graphs with warnings; provide specific dominant rejection instructions for failed acquisition.
 - [x] Production build and regression tests cover normal variation, outliers, multiple-face failure and no-data rejection.
+
+## Project summary — 2026-10-12
+
+- [x] Added `summary.MD`: current 10-second workflow, exact quick-index rules, architecture, development history, research comparators, privacy, setup/deployment and verification limits (source snapshot `cf428c5`).
+- [x] Audited and fixed the pulse evaluation runner: real tracked faces and gates, missing branch scores, non-overlapping baseline/evaluation windows, and per-subject baseline z-scored fusion. See the later verification note for runtime limitations.
+
+## Deployed algorithm evaluation and pulse fixes — 2026-10-12
+
+- [x] Added Python port of QuickIndex geometry, fixed reference spreads, gates, 10-second windows, consensus and coverage rules; Node/Python fixture parity checked within 1e-6.
+- [x] Reworked pulse runner to use real MediaPipe landmarks, exact-one-face validity, pose/speaking gates and separate windows that cannot cross the 25-second baseline cutoff. Removed label-derived M0/H1 scores; missing branches stay missing. Added overlap and missing-score regression tests.
+- [x] Added `evaluate_deployed.py`: non-overlapping 10-second clips, D0/D1/D2, task splits, cluster bootstrap/permutation comparisons, Holm correction, T1 geometry confounds, nuisance perturbations and a fixed decision report.
+- [x] Added `repeatability.py`: per-condition within-person SD/SEM/MDC95, ICC(2,1), Bland–Altman, repeated-measures correlation, subject-bootstrap AUC checks and explicit PASS/FAIL report.
+- [x] Updated stress_math README and dependencies documentation; frontend source unchanged.
+- [x] Verification: 36 Python tests passed, one optional HF inference test skipped because Torch/Transformers are absent in this environment. Pulse smoke and the new Node/Python parity tests passed.
+- [ ] Real-video evaluation remains unverified: no labeled evaluation videos were provided in this worktree. The local MediaPipe detector smoke attempt could not create an NSOpenGL context in this execution environment. Offline pose estimates use OpenCV solvePnP, so frames near browser pose thresholds may classify differently.

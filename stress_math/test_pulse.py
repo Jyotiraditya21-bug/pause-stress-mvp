@@ -11,10 +11,25 @@ from .pulse_features import (
     extract_roi_signal, SNR_MIN, MIN_FPS, MIN_VALID_RATIO
 )
 from .supervised_reference import evaluate_supervised
-from .pulse_evaluate import run_pulse_pipeline, make_smoke_test_data
+from .pulse_evaluate import run_pulse_pipeline, make_smoke_test_data, split_windows, branch_series
 
 
 class PulseBranchTests(unittest.TestCase):
+    def test_baseline_windows_do_not_overlap_evaluation_cutoff(self):
+        windows=[dict(start_time=s,end_time=s+20) for s in (0,2,4,6,24,25,26)]
+        baseline,evaluation=split_windows(windows)
+        self.assertTrue(all(w['end_time']<=25 for w in baseline))
+        self.assertTrue(all(w['start_time']>=25 for w in evaluation))
+        self.assertNotIn(windows[4],baseline)
+        self.assertNotIn(windows[4],evaluation)
+        self.assertIn(windows[5],evaluation)
+
+    def test_unavailable_video_branches_remain_missing_without_label_fallback(self):
+        n=20;payload=dict(times=np.arange(n)/30,valid_face_mask=np.ones(n,bool))
+        series=branch_series(payload,payload)
+        self.assertTrue(np.isnan(series['M0']).all())
+        self.assertTrue(np.isnan(series['H1']).all())
+
     def test_synthetic_sinusoid_hr(self):
         """(a) Synthetic 1.2 Hz sinusoid + noise returns ~72 bpm within 2 bpm."""
         fps = 30.0
@@ -160,7 +175,7 @@ class PulseBranchTests(unittest.TestCase):
             # Check all mandatory disclaimers
             required_phrases = [
                 'pulse features are camera estimates, not ECG-grade HRV',
-                'LF from 30 s windows is unreliable',
+                'LF from 20 s windows is especially unreliable',
                 'supervised models are references only',
                 'labels are task-based',
                 'no thresholds, signs or weights were fitted on test data',

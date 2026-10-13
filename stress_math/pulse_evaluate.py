@@ -104,210 +104,183 @@ def fmt_interval(val: Any, ci: Optional[Sequence[Any]], digits: int = 3) -> str:
     return f"{val:.{digits}f} [{ci[0]:.{digits}f}, {ci[1]:.{digits}f}]"
 
 
-def run_pulse_pipeline(
-    sessions: Sequence[Dict[str, Any]],
-    cache_dir: Path,
-    output_dir: Path,
-    rppg_channel: str = 'u',
-    cwt_cleaning: bool = False,
-) -> Dict[str, Any]:
-    """Execute evaluation comparing M0, P, M0+P, H1, H1+P and ablations."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    
-    session_records = []
-    all_window_records = []
-    
+PULSE_WINDOW_SECONDS = 20.0  # Fixed before evaluation; fits inside 25 s rest.
+
+
+def isolated_windows(payload, start, end, cwt_cleaning=False):
+    """Filter/derive each window independently: never use samples outside it."""
+    times=np.asarray(payload['times'],float)
+    raw=np.asarray(payload['ppg_signal'],float)
+    valid=np.asarray(payload['valid_face_mask'],bool)
+    fps=float(payload['fps']); result=[]
+    for left in np.arange(start, end-PULSE_WINDOW_SECONDS+1e-8, 2.):
+        right=left+PULSE_WINDOW_SECONDS
+        mask=(times>=left)&(times<right)
+        t=times[mask]; v=valid[mask]; signal=raw[mask].copy()
+        if len(t)<2: continue
+        signal[~v]=np.nan
+        filtered=filter_signal(signal,fps,cwt_clean=cwt_cleaning)
+        # The extractor expects an inclusive end timestamp; append a boundary
+        # sample for its duration check only (the feature mask is right-open).
+        tt=np.r_[t,right]; ff=np.r_[filtered,filtered[-1]]; vv=np.r_[v,False]
+        windows=extract_sliding_windows(tt,ff,vv,fps,window_sec=PULSE_WINDOW_SECONDS,step_sec=2.)
+        if windows:
+            w=windows[0]; w['start_time']=float(left);w['end_time']=float(right)
+            result.append(w)
+    return result
+
+
+def split_windows(windows):
+    # Use strict interval boundaries; a window crossing the baseline cutoff is dropped.
+    return ([w for w in windows if w['start_time']>=0 and w['end_time']<=25],
+            [w for w in windows if w['start_time']>=25 and w['end_time']>w['start_time']])
+
+
+def branch_stats(values):
+    a=np.asarray(values,float);a=a[np.isfinite(a)]
+    if not len(a): return None
+    mu=float(a.mean())
+    return dict(mu=mu,sigma=max(float(a.std()),.05*abs(mu)+.001),n=len(a))
+
+
+def branch_z(value, stats):
+    if stats is None or not np.isfinite(value): return np.nan
+    return float(np.clip((value-stats['mu'])/(stats['sigma']+1e-6),-3,3))
+
+
+def mean_finite(a):
+    a=np.asarray(a,float);a=a[np.isfinite(a)]
+    return float(a.mean()) if len(a) else np.nan
+
+
+def extract_payload(path, cache, channel):
+    """Real shared MediaPipe landmarks, pose and speaking gates; no dummy ROI."""
+    from .video import extract, features
+    data=extract(path,cache); rows=features(data)
+    face_counts=np.asarray(data.get('face_counts',np.ones(len(rows),dtype=int)))
+    valid=np.array([count==1 and 'ear' in r and not r.get('gated',False) and
+                    np.isfinite(a).all() and max(abs(a[:2]))<=35
+                    for r,a,count in zip(rows,data['pose'],face_counts)])
+    signals=[]; heuristic=[]; engine=StressEngine('H1')
+    cap=cv2.VideoCapture(str(path)); tick=time.perf_counter()
+    try:
+        for t,landmarks,ok in zip(data['times'],data['landmarks'],valid):
+            decoded,frame=cap.read()
+            if not decoded: raise ValueError('Frame count differs from landmark cache')
+            signals.append(extract_roi_signal(frame,landmarks,channel) if ok else np.nan)
+            heuristic.append(engine.extract(landmarks,frame,float(t))[0] if ok else None)
+    finally: cap.release()
+    return dict(times=data['times'],ppg_signal=np.asarray(signals),valid_face_mask=valid,
+                fps=float(data['fps']),math_rows=rows,heuristic_rows=heuristic,
+                extraction_ms_frame=float(data['ms_frame'])+(time.perf_counter()-tick)*1000/max(len(rows),1))
+
+
+def branch_series(payload, rest):
+    """Actual M0/H1 series; optional supplied numeric series have no label access."""
+    times=np.asarray(payload['times']); n=len(times)
+    series={m:np.full(n,np.nan) for m in ('M0','H1')}
+    if 'math_rows' in rest and 'math_rows' in payload:
+        cal=[r for r in rest['math_rows'] if r['time']<25 and 'ear' in r and not r.get('gated',False)]
+        if len(cal)>=30:
+            model=Index(cal)
+            series['M0']=np.array([model.score(r) for r in payload['math_rows']],float)
+    if 'heuristic_rows' in rest and 'heuristic_rows' in payload:
+        cal=[r for t,r in zip(rest['times'],rest['heuristic_rows']) if t<25 and r is not None]
+        if cal:
+            model=StressEngine('H1',StressEngine.rest_baseline(cal))
+            for i,(t,row) in enumerate(zip(times,payload['heuristic_rows'])):
+                if row is not None:
+                    value,_,_=model.update(row,float(t));series['H1'][i]=100*(1-value/10)
+    for m in ('M0','H1'):
+        key=m.lower()+'_scores'
+        if key in payload:
+            values=np.asarray(payload[key],float)
+            if values.shape!=(n,):raise ValueError(key+' must match frame timestamps')
+            series[m]=values.copy()
+        series[m][~np.asarray(payload['valid_face_mask'],bool)]=np.nan
+    return series
+
+
+def run_pulse_pipeline(sessions, cache_dir, output_dir, rppg_channel='u', cwt_cleaning=False):
+    """Fixed main methods only. Missing method evidence stays missing."""
+    output_dir=Path(output_dir);cache_dir=Path(cache_dir)
+    output_dir.mkdir(parents=True,exist_ok=True);cache_dir.mkdir(parents=True,exist_ok=True)
+    memo={};session_records=[];all_window_records=[]
+    def payload(session):
+        if session.get('ppg_signal') is not None:
+            required=('times','valid_face_mask','fps')
+            if any(k not in session for k in required):raise ValueError('Signal payload requires real timestamps, validity flags and FPS')
+            return session
+        path=str(session['video_path'])
+        if path not in memo:memo[path]=extract_payload(path,cache_dir,rppg_channel)
+        return memo[path]
+    def rest_session(session):
+        declared=session.get('baseline_video_path')
+        if declared:
+            return next((r for r in sessions if r.get('video_path')==declared),dict(video_path=declared))
+        rests=[r for r in sessions if str(r['subject_id'])==str(session['subject_id']) and
+               r.get('dataset')==session.get('dataset') and int(r['label'])==0]
+        if len(rests)!=1:raise ValueError('Declare baseline_video_path for an unambiguous first 25 s of rest')
+        return rests[0]
     for s in sessions:
-        # Check if video file exists or if synthetic data is provided
-        video_path = s.get('video_path')
-        subject_id = str(s.get('subject_id', 'unknown'))
-        dataset_name = str(s.get('dataset', 'unknown'))
-        label = int(s.get('label', 0))
-        
-        # Load or extract video frames / signals
-        # If video file exists on disk, process with OpenCV; otherwise check synthetic payload
-        times = s.get('times')
-        ppg_signal = s.get('ppg_signal')
-        valid_face_mask = s.get('valid_face_mask')
-        fps = float(s.get('fps', 30.0))
-        
-        if ppg_signal is None and video_path and Path(video_path).exists():
-            cap = cv2.VideoCapture(str(video_path))
-            fps = float(cap.get(cv2.CAP_PROP_FPS) or 30.0)
-            raw_sigs = []
-            ts = []
-            val_mask = []
-            i = 0
-            # Read landmarks from cache or extract
-            # Here we assume extraction from frames or cached arrays
-            while True:
-                ok, frame = cap.read()
-                if not ok:
-                    break
-                t = i / fps
-                ts.append(t)
-                val_mask.append(True)
-                # Spatially average ROI
-                # Dummy default landmark bounding box if MediaPipe landmarks aren't cached
-                h, w = frame.shape[:2]
-                dummy_lm = np.zeros((478, 3))
-                # rough center
-                dummy_lm[10] = [w*0.5, h*0.25, 0]
-                dummy_lm[109] = [w*0.4, h*0.2, 0]
-                dummy_lm[108] = [w*0.4, h*0.3, 0]
-                dummy_lm[9] = [w*0.5, h*0.35, 0]
-                dummy_lm[337] = [w*0.6, h*0.2, 0]
-                dummy_lm[338] = [w*0.6, h*0.3, 0]
-                dummy_lm[50] = [w*0.3, h*0.55, 0]
-                dummy_lm[101] = [w*0.25, h*0.6, 0]
-                dummy_lm[205] = [w*0.35, h*0.65, 0]
-                dummy_lm[187] = [w*0.38, h*0.58, 0]
-                dummy_lm[280] = [w*0.7, h*0.55, 0]
-                dummy_lm[330] = [w*0.65, h*0.6, 0]
-                dummy_lm[425] = [w*0.75, h*0.65, 0]
-                dummy_lm[411] = [w*0.62, h*0.58, 0]
-                sig = extract_roi_signal(frame, dummy_lm, channel=rppg_channel)
-                raw_sigs.append(sig)
-                i += 1
-            cap.release()
-            times = np.array(ts)
-            ppg_signal = np.array(raw_sigs)
-            valid_face_mask = np.array(val_mask)
-            
-        if ppg_signal is None or len(ppg_signal) == 0:
-            continue
-            
-        # Filter signal
-        filtered = filter_signal(ppg_signal, fps, cwt_clean=cwt_cleaning)
-        
-        # Sliding windows (30 s duration, 2 s step)
-        windows = extract_sliding_windows(
-            times, filtered, valid_face_mask, fps,
-            window_sec=30.0, step_sec=2.0
-        )
-        
-        # Split baseline (first 25 s) vs evaluation segment (>= 25 s)
-        rest_windows = [w for w in windows if w['start_time'] < 25.0 and w['gate_passed']]
-        eval_windows = [w for w in windows if w['start_time'] >= 25.0]
-        
-        if not rest_windows:
-            rest_windows = [w for w in windows[:2] if w['gate_passed']]
-        if not eval_windows:
-            eval_windows = [w for w in windows if w not in rest_windows] or windows
-            
-        # Personal baseline models
-        pulse_index = PulseIndex(rest_windows, selected=PULSE_FEATURES)
-        pulse_ablation_models = {
-            f'without_{f}': PulseIndex(rest_windows, selected=[k for k in PULSE_FEATURES if k != f])
-            for f in PULSE_FEATURES
-        }
-        pulse_ablation_models['time_only'] = PulseIndex(rest_windows, selected=TIME_FEATURES)
-        pulse_ablation_models['freq_only'] = PulseIndex(rest_windows, selected=FREQ_FEATURES)
-        
-        # M0 baseline
-        cal_math = s.get('math_baseline', [{'brow_furrow': 0.0} for _ in range(10)])
-        m0_index = Index(cal_math)
-        
-        # H1 baseline
-        h1_engine = StressEngine('H1', s.get('heuristic_baseline'))
-        
-        # Score evaluation windows
-        m0_scores = []
-        p_scores = []
-        h1_scores = []
-        ablation_window_scores = {k: [] for k in ABLATION_KEYS}
-        
-        valid_eval_count = 0
-        for w in eval_windows:
-            # Pulse score
-            p_val = pulse_index.score(w)
-            p_scores.append(p_val)
-            
-            # Ablations
-            ablation_window_scores['full_P'].append(p_val)
-            for k, model in pulse_ablation_models.items():
-                ablation_window_scores[k].append(model.score(w))
-                
-            # M0 on window
-            m0_val = s.get('m0_score', 50.0 + (15.0 if label == 1 else -15.0))
-            m0_scores.append(m0_val)
-            
-            # H1 on window
-            h1_val = s.get('h1_score', 50.0 + (12.0 if label == 1 else -12.0))
-            h1_scores.append(h1_val)
-            
-            if w['gate_passed'] and np.isfinite(p_val):
-                valid_eval_count += 1
-                
-            # Store window record for supervised reference
-            w_copy = dict(w)
-            w_copy['subject_id'] = subject_id
-            w_copy['label'] = label
-            all_window_records.append(w_copy)
-            
-        coverage_pct = (valid_eval_count / max(len(eval_windows), 1)) * 100.0 if eval_windows else 0.0
-        excluded = coverage_pct < 40.0
-        
-        # Mean session scores
-        mean_p = float(np.nanmean(p_scores)) if any(np.isfinite(p_scores)) else np.nan
-        mean_m0 = float(np.nanmean(m0_scores)) if any(np.isfinite(m0_scores)) else np.nan
-        mean_h1 = float(np.nanmean(h1_scores)) if any(np.isfinite(h1_scores)) else np.nan
-        
-        # Fusion scores
-        # z-score normalization against rest baseline means
-        z_m0 = np.clip((mean_m0 - 50.0) / 10.0, -3.0, 3.0) if np.isfinite(mean_m0) else np.nan
-        z_p = np.clip((mean_p - 50.0) / 10.0, -3.0, 3.0) if np.isfinite(mean_p) else np.nan
-        z_h1 = np.clip((mean_h1 - 50.0) / 10.0, -3.0, 3.0) if np.isfinite(mean_h1) else np.nan
-        
-        m0_p_fusion = float(100.0 * expit((z_m0 + z_p) / 2.0)) if np.isfinite(z_m0) and np.isfinite(z_p) else np.nan
-        h1_p_fusion = float(100.0 * expit((z_h1 + z_p) / 2.0)) if np.isfinite(z_h1) and np.isfinite(z_p) else np.nan
-        
-        ablations_mean = {
-            k: float(np.nanmean(v)) if any(np.isfinite(v)) else np.nan
-            for k, v in ablation_window_scores.items()
-        }
-        
-        session_records.append({
-            'subject_id': subject_id,
-            'dataset': dataset_name,
-            'label': label,
-            'excluded': excluded,
-            'coverage_percent': coverage_pct,
-            'methods': {
-                'M0': mean_m0,
-                'P': mean_p,
-                'M0+P': m0_p_fusion,
-                'H1': mean_h1,
-                'H1+P': h1_p_fusion,
-            },
-            'ablations': ablations_mean,
-            'method_ms_frame': {
-                'M0': 4.5,
-                'P': 3.2,
-                'M0+P': 7.7,
-                'H1': 8.0,
-                'H1+P': 11.2,
-            }
-        })
-        
+        tick=time.perf_counter()
+        data=payload(s);rest=payload(rest_session(s))
+        duration=float(data['times'][-1])+1/float(data['fps']) if len(data['times']) else 0.
+        rest_end=min(25.,float(rest['times'][-1])+1/float(rest['fps'])) if len(rest['times']) else 0.
+        rest_windows,_=split_windows(isolated_windows(rest,0,rest_end,cwt_cleaning))
+        rest_windows=[w for w in rest_windows if w['gate_passed']]
+        start=max(25.,float(s.get('start_seconds') or 25))
+        end=min(duration,float(s.get('end_seconds') or duration))
+        _,windows=split_windows(isolated_windows(data,start,end,cwt_cleaning))
+        pulse_index=PulseIndex(rest_windows)
+        models={k:PulseIndex(rest_windows,selected=[f for f in PULSE_FEATURES if k!='without_'+f])
+                for k in ABLATION_KEYS if k.startswith('without_')}
+        models.update(full_P=pulse_index,time_only=PulseIndex(rest_windows,selected=TIME_FEATURES),freq_only=PulseIndex(rest_windows,selected=FREQ_FEATURES))
+        base_series=branch_series(rest,rest);series=branch_series(data,rest)
+        def window_mean(values,payload,w):
+            t=np.asarray(payload['times']);return mean_finite(values[(t>=w['start_time'])&(t<w['end_time'])])
+        stats={m:branch_stats([window_mean(base_series[m],rest,w) for w in rest_windows]) for m in ('M0','H1')}
+        stats['P']=branch_stats([pulse_index.score(w) for w in rest_windows])
+        scores={m:[] for m in METHODS};ablations={k:[] for k in ABLATION_KEYS}
+        for w in windows:
+            vals={m:window_mean(series[m],data,w) for m in ('M0','H1')}
+            vals['P']=pulse_index.score(w) if w['gate_passed'] else np.nan
+            for a in ('M0','H1'):
+                z=[branch_z(vals[m],stats[m]) for m in (a,'P')]
+                vals[a+'+P']=float(100*expit(np.mean(z))) if np.isfinite(z).all() else np.nan
+            for m in METHODS:scores[m].append(vals[m])
+            for k,model in models.items():ablations[k].append(model.score(w) if w['gate_passed'] else np.nan)
+        mask=(np.asarray(data['times'])>=start)&(np.asarray(data['times'])<end)
+        coverage=100*float(np.mean(np.asarray(data['valid_face_mask'])[mask])) if mask.any() else 0.
+        method_coverage={m:100*sum(np.isfinite(scores[m]))/max(len(windows),1) for m in METHODS}
+        excluded=coverage<40
+        methods={m:mean_finite(scores[m]) if not excluded and method_coverage[m]>=40 else np.nan for m in METHODS}
+        session_records.append(dict(subject_id=str(s.get('dataset','unknown'))+':'+str(s['subject_id']),
+            dataset=s.get('dataset','unknown'),video_path=s.get('video_path'),label=int(s['label']),
+            excluded=excluded,coverage_percent=coverage,method_coverage_percent=method_coverage,
+            methods=methods,ablations={k:mean_finite(v) if method_coverage['P']>=40 else np.nan for k,v in ablations.items()},
+            baseline_windows=[{'start':w['start_time'],'end':w['end_time']} for w in rest_windows],
+            evaluation_windows=[{'start':w['start_time'],'end':w['end_time']} for w in windows],branch_baselines=stats,
+            total_processing_ms_frame=(time.perf_counter()-tick)*1000/max(len(data['times']),1),
+            method_ms_frame={m:None for m in METHODS}))
     # Analyze pooling across methods
     eligible = [r for r in session_records if not r['excluded']]
     pooled: Dict[str, Any] = {'methods': {}, 'permutations': {}}
     
     for m in METHODS:
-        adapted = [{**r, 's': r['methods'].get(m, np.nan)} for r in eligible]
+        adapted = [{**r, 's': r['methods'][m]} for r in eligible if np.isfinite(r['methods'].get(m,np.nan))]
         missing = any(not np.isfinite(r['s']) for r in adapted)
         metric = {'status': 'unavailable: missing score on fixed cohort'} if missing or not adapted else summarize(adapted, 's')
         metric['coverage_percent'] = float(np.mean([r['coverage_percent'] for r in eligible])) if eligible else None
-        metric['ms_per_frame'] = float(np.mean([r['method_ms_frame'][m] for r in eligible])) if eligible else None
+        metric['ms_per_frame'] = None
+        metric['excluded_missing_method'] = len(eligible)-len(adapted)
         pooled['methods'][m] = metric
         pooled['permutations'][m] = permutation_test([] if missing else adapted, 's')
         
     # Pairwise AUC differences with Holm correction
     pairwise = {}
     for a, b in itertools.combinations(METHODS, 2):
-        pairwise[f'{a}_vs_{b}'] = paired_method_auc_difference(session_records, a, b)
+        pairwise[f'{a}_vs_{b}'] = paired_method_auc_difference([r for r in eligible if all(np.isfinite(r['methods'][m]) for m in (a,b))], a, b)
     pooled['pairwise_auc_differences'] = holm_correction(pairwise)
     
     # Ablations analysis
@@ -327,13 +300,15 @@ def run_pulse_pipeline(
         ablation_auc_drop[k] = (full_p_auc - auc) if full_p_auc is not None and auc is not None else None
         
     # Supervised references (LOSO vs Random split)
-    supervised = evaluate_supervised(all_window_records)
+    supervised = {'status':'not run: main runner never trains', 'table':'Not run. Supervised references remain a separate optional API.'}
     
     result = {
         'protocol': {
             'trained': False,
             'seed': 42,
             'baseline_seconds': 25,
+            'window_seconds': PULSE_WINDOW_SECONDS,
+            'window_filtering': 'independent; baseline end <=25, evaluation start >=25',
             'sigma_floor': 'max(raw_sd, 0.05 * abs(mu) + 1e-3)',
             'z_clip': [-3, 3],
             'signs': PULSE_SIGNS,
@@ -429,7 +404,7 @@ Inspired by Maaoui, Bousefsaf & Pruski (2020) webcam PPG stress detection.
 ## Mandatory Scientific and Methodological Boundaries
 
 - **pulse features are camera estimates, not ECG-grade HRV**: Camera-derived rPPG signals measure blood volume pulse variations via optical skin absorption. They are subject to illumination noise, motion artifacts, and camera compression, and must not be treated as clinical ECG or medical-grade physiological measurements.
-- **LF from 30 s windows is unreliable**: Classical heart rate variability (HRV) guidelines (Task Force, 1996) require at least 1 to 2 minutes of recording to resolve Low Frequency (0.04 - 0.15 Hz) rhythms. Spectral LF estimated over ultra-short 30-second windows has high statistical variance and serves as an engineering proxy only.
+- **LF from 20 s windows is especially unreliable**: Classical heart rate variability (HRV) guidelines (Task Force, 1996) require at least 1 to 2 minutes of recording to resolve Low Frequency (0.04 - 0.15 Hz) rhythms. Spectral LF estimated over an ultra-short 20-second window has high statistical variance and serves as an engineering proxy only.
 - **supervised models are references only**: Supervised classifiers (SVM and LDA) are evaluated exclusively to quantify subject leakage and demonstrate the impact of unseparated validation splits; they are NOT the main proposed method and are never used for personal guidance.
 - **labels are task-based**: Evaluation labels represent controlled experiment tasks (rest vs stressor tasks), not clinically diagnosed stress or burnout.
 - **no thresholds, signs or weights were fitted on test data**: Pulse feature directions (meanHR +, StdHR +, DerHR +, RMSSD -, HF -, LF +, LF/HF +), 25-second baseline calibration, sigma floors, quality gates, and equal fusion weights were determined a priori from physiology literature before evaluation.
@@ -439,7 +414,7 @@ Inspired by Maaoui, Bousefsaf & Pruski (2020) webcam PPG stress detection.
 1. **Signal extraction**: Skin ROI consists of forehead and cheek patches from MediaPipe landmarks. Spatially averaged over CIE L*u*v* $u^*$ channel (or BGR green channel).
 2. **Filtering**: Linear detrending, 4th-order zero-phase Butterworth bandpass filter (0.65 - 3.0 Hz).
 3. **Pulse rate trace**: Peak detection with minimum distance corresponding to 3 Hz ($f_s / 3$), instantaneous HR = $60 / \text{{IBI}}$, resampled to 30 Hz by linear interpolation.
-4. **Window features**: 30 s sliding windows with 2 s step. Seven features: meanHR, StdHR, DerHR, RMSSD, LF power (0.04 - 0.15 Hz), HF power (0.15 - 0.35 Hz), and LF/HF ratio. RMSSD_rr is calculated on discrete inter-beat intervals and reported separately.
+4. **Window features**: fixed 20 s windows with 2 s step, filtered independently. Baseline windows end at or before 25 s of rest; evaluation windows start at or after 25 s. A 30 s window cannot fit the baseline. LF is even less reliable at 20 s. Seven features: meanHR, StdHR, DerHR, RMSSD, LF power (0.04 - 0.15 Hz), HF power (0.15 - 0.35 Hz), and LF/HF ratio. RMSSD_rr is calculated on discrete inter-beat intervals and reported separately.
 5. **Quality gate**: Windows require FPS >= 15, valid face frames >= 80%, and spectral peak SNR >= 2.0. Failed windows remain missing, not imputed.
 
 ## Results Summary
@@ -564,8 +539,7 @@ def make_smoke_test_data() -> List[Dict[str, Any]]:
                 'ppg_signal': ppg,
                 'valid_face_mask': val_mask,
                 'fps': fps,
-                'm0_score': 45.0 if label == 0 else 62.0,
-                'h1_score': 46.0 if label == 0 else 60.0,
+                # Synthetic pulse only: M0/H1 intentionally unavailable.
             })
             
     return sessions
@@ -583,7 +557,7 @@ def main() -> None:
     
     args = parser.parse_args()
     
-    if args.smoke_test or not args.manifest:
+    if args.smoke_test:
         sessions = make_smoke_test_data()
     else:
         from .datasets import load
