@@ -1,140 +1,148 @@
 import React, {useEffect,useRef,useState} from 'react';
-import {assessQuickFrame,faceBrightness} from './scanMetrics.js';
-import {QuickIndex,geometry,headPose,SCAN_SECONDS} from './liveIndex.js';
-import {awaitResource} from './resourceWait.js';
-import {advanceScanState,createScanState,HARD_CAP_SECONDS} from './scanState.js';
-import {trackEvent} from './monitoring.js';
+import {FaceLandmarker,FilesetResolver} from '@mediapipe/tasks-vision';
+import {assessQuickFrame,faceBrightness} from './scanMetrics';
+import {QuickIndex,headPose,SCAN_SECONDS} from './liveIndex';
+import {awaitResource} from './resourceWait';
 
-function cameraError(error) {
-  if(!globalThis.isSecureContext)return 'Camera access needs a secure connection. Open the HTTPS site or use localhost.';
-  if(error?.name==='NotAllowedError')return 'Camera access was blocked. Allow camera access in your browser settings, then start again.';
-  if(error?.name==='NotFoundError')return 'No camera was found. Connect a camera, then start again.';
-  if(error?.name==='NotReadableError')return 'The camera is being used by another app. Close that app, then start again.';
-  return error?.message||'Facial analysis could not start. Reload the page, then try again.';
-}
-
-export default function CameraScan({onComplete,baseline=null,calibrating=false,render}) {
+const MAX_SECONDS=SCAN_SECONDS;
+export default function CameraScan({onComplete}) {
   const [state,setState]=useState('idle');
-  const [error,setError]=useState(''),[hint,setHint]=useState('Fit your face in the circle');
-  const [progress,setProgress]=useState(0),[paused,setPaused]=useState(false);
+  const [error,setError]=useState(''),[feedback,setFeedback]=useState('');
+  const [seconds,setSeconds]=useState(0),[good,setGood]=useState(false);
+  const [points,setPoints]=useState([]),[reading,setReading]=useState(null),[phase,setPhase]=useState('live');
+  const [perf,setPerf]=useState(null);
   const video=useRef(null),overlay=useRef(null),runtime=useRef({}),mounted=useRef(true);
-
-  function cancelLoop(r){
-    if(r.videoCallback&&video.current?.cancelVideoFrameCallback)video.current.cancelVideoFrameCallback(r.videoCallback);
-    cancelAnimationFrame(r.frame);
-  }
   function stop() {
-    const r=runtime.current;cancelLoop(r);clearTimeout(r.timer);
-    r.stream?.getTracks().forEach(track=>track.stop());
-    try{r.model?.close();}catch{}
-    if(video.current)video.current.srcObject=null;
+    const r=runtime.current;cancelAnimationFrame(r.frame);clearTimeout(r.timer);
+    r.stream?.getTracks().forEach(t=>t.stop());r.model?.close();
+    if(video.current) video.current.srcObject=null;
     runtime.current={};
   }
-  function cancel(){stop();setState('idle');setProgress(0);setPaused(false);setHint('Fit your face in the circle');}
-
   useEffect(()=>{
     mounted.current=true;
-    const hide=()=>{if(document.hidden&&(runtime.current.starting||runtime.current.stream)){cancel();setError('The camera stopped when the page was hidden. Return to this page and start again.');}};
+    const hide=()=>{if(document.hidden&&(runtime.current.starting||runtime.current.stream)){stop();setState('idle');setReading(null);setGood(false);setError('Camera stopped because this page was hidden. Start the 10-second scan again.');}};
     document.addEventListener('visibilitychange',hide);
     return()=>{mounted.current=false;document.removeEventListener('visibilitychange',hide);stop();};
   },[]);
-
-  function complete(capped=false){
+  function finish() {
     const r=runtime.current;
-    if(!r.scan||r.finishing)return;
-    r.finishing=true;setState('analyzing');cancelLoop(r);
+    if(!r.scan) return;
+    const duration=Math.min(MAX_SECONDS,(performance.now()-r.scan.start)/1000);
     const outcome=r.scan.index.finish();
-    const wall=(performance.now()-r.scan.wallStart)/1000;
-    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:'quick-canonical-index-v3',...outcome,
-      status:outcome.status,mode:calibrating?'calibration':outcome.mode,frames:r.scan.total,validFrames:r.scan.valid,
-      durationSeconds:wall,capped,performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(wall,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
-    if(capped&&summary.status==='ok'){
-      summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
-    }
-    trackEvent(summary.status==='failed'?'scan_failed':'scan_result',{status:summary.status,reason:summary.failReason||summary.reason||''});
-    setTimeout(()=>{
-      if(!mounted.current)return;
-      stop();setState(summary.status==='failed'?'failed':'result');onComplete(summary);
-    },250);
+    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:'quick-canonical-index-v2',
+      ...outcome,frames:r.scan.total,validFrames:r.scan.valid,durationSeconds:duration,
+      performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(duration,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
+    stop();setState('done');setReading(null);onComplete(summary);
   }
-
-  function schedule(r){
-    const callback=()=>{tick();if(runtime.current===r&&r.model)schedule(r);};
-    if(video.current?.requestVideoFrameCallback)r.videoCallback=video.current.requestVideoFrameCallback(callback);
-    else r.frame=requestAnimationFrame(callback);
-  }
-
-  function tick(){
-    const r=runtime.current,v=video.current;
-    if(!r.model||!v||!mounted.current||r.finishing)return;
-    const now=performance.now();
-    if(v.readyState<2||v.currentTime===r.lastVideoTime||now-r.lastRun<95)return;
-    r.lastRun=now;r.lastVideoTime=v.currentTime;
-    try{
-      const processingStart=performance.now();
-      const result=r.model.detectForVideo(v,now);
-      const inferenceMs=performance.now()-processingStart;
-      const ctx=r.sampleCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,64,48);
-      const pixels=ctx.getImageData(0,0,64,48).data;
-      const landmarks=result.faceLandmarks[0];
-      const brightness=faceBrightness(pixels,64,48,landmarks);
-      const quality=assessQuickFrame(landmarks,result.faceLandmarks.length,brightness,r.previous);
-      r.previous=quality.center;
-      const pose=headPose(result.facialTransformationMatrixes?.[0]);
-      const poseGood=!pose||(Math.abs(pose[0])<=38&&Math.abs(pose[1])<=30);
-      let mouthOpen=false,xy=[];
-      if(landmarks){xy=landmarks.map(p=>[p.x*v.videoWidth,p.y*v.videoHeight]);try{mouthOpen=geometry(xy).mar>.32;}catch{}}
-      const flags={...quality.qualityFlags,mouthOpen,pose:!poseGood};
-      const good=quality.good&&poseGood&&!mouthOpen;
-      const specificHint=mouthOpen?'Close your mouth':!poseGood?'Face the camera':quality.reason;
-      const previous=r.scan.machine;
-      r.scan.machine=advanceScanState(previous,now/1000,good);
-      const machine=r.scan.machine;
-      setState(machine.state);setProgress(machine.goodElapsed/SCAN_SECONDS);setPaused(machine.paused);
-      setHint(machine.paused?specificHint:machine.state==='positioning'?(good?'Hold still':'Fit your face in the circle'):specificHint);
-
-      if(previous.state==='countdown'||machine.state==='countdown'||machine.state==='analyzing'){
-        const observation=r.scan.index.update(Math.min(machine.goodElapsed,SCAN_SECONDS-.000001),xy,pose,good,{brightness,qualityReason:specificHint,qualityFlags:flags});
-        r.scan.total++;if(observation.valid)r.scan.valid++;
-      }
-
-      const canvas=overlay.current;
-      if(canvas){
-        canvas.width=v.videoWidth;canvas.height=v.videoHeight;
-        const draw=canvas.getContext('2d');draw.clearRect(0,0,canvas.width,canvas.height);draw.fillStyle=good?'#6cc3c6':'#e4b05a';
-        landmarks?.filter((_,i)=>i%5===0).forEach(p=>{draw.beginPath();draw.arc(p.x*canvas.width,p.y*canvas.height,1.7,0,Math.PI*2);draw.fill();});
-      }
-      r.scan.allFrames++;r.scan.inferenceSum+=inferenceMs;r.scan.processingSum+=performance.now()-processingStart;
-      if(machine.state==='analyzing')complete(!!machine.capped);
-    }catch(error){
-      const message=/wasm|webgl/i.test(String(error))?'Facial analysis could not load. Reload the page in an up-to-date browser, then try again.':'Facial analysis stopped. Reload the page, then try again.';
-      stop();setState('failed');setError(message);
-    }
-  }
-
-  async function start(){
-    trackEvent('scan_started');
-    stop();setError('');setProgress(0);setPaused(false);setState('permission');setHint('Starting camera…');
+  async function start() {
+    stop();setError('');setPoints([]);setReading(null);setSeconds(0);setState('loading');setGood(false);
     const r=runtime.current;r.starting=true;const isCurrent=()=>mounted.current&&runtime.current===r;
-    try{
-      if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera access. Use an up-to-date browser on HTTPS.');
-      r.stream=await awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(track=>track.stop()),message:'Camera permission is still pending. Allow camera access, then start again.'});
-      if(!isCurrent())return;
-      setState('loading');
-      r.stream.getVideoTracks().forEach(track=>track.addEventListener('ended',()=>{if(isCurrent()){stop();setState('failed');setError('The camera disconnected. Reconnect it, then start again.');}}));
+    try {
+      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access requires HTTPS or localhost and a supported browser.');
+      r.stream=await awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(t=>t.stop()),message:'Camera permission is still pending. Allow camera access, then retry.'});
+      if(!mounted.current||runtime.current!==r){r.stream.getTracks().forEach(t=>t.stop());return;}
+      r.stream.getVideoTracks().forEach(track=>track.addEventListener('ended',()=>{
+        if(mounted.current&&runtime.current===r){stop();setState('idle');setReading(null);setError('Camera disconnected. Reconnect it and start again.');}
+      }));
       video.current.srcObject=r.stream;await video.current.play();
-      const {FaceLandmarker,FilesetResolver}=await import('@mediapipe/tasks-vision');
-      const files=await awaitResource(FilesetResolver.forVisionTasks(`${import.meta.env.BASE_URL}mediapipe/wasm`),{isCurrent,message:'Facial analysis files did not load. Check your connection, then start again.'});
-      r.model=await awaitResource(FaceLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`,delegate:'CPU'},runningMode:'VIDEO',numFaces:2,outputFacialTransformationMatrixes:true}),{isCurrent,dispose:model=>model.close(),message:'Facial analysis did not start. Reload the page, then try again.'});
-      if(!isCurrent()){r.model?.close();return;}
+      if(!mounted.current||runtime.current!==r) return;
+      const files=await awaitResource(FilesetResolver.forVisionTasks(`${import.meta.env.BASE_URL}mediapipe/wasm`),{isCurrent,message:'Facial analysis files took too long to load. Check your connection and retry.'});
+      if(!mounted.current||runtime.current!==r) return;
+      r.model=await awaitResource(FaceLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`,delegate:'CPU'},runningMode:'VIDEO',numFaces:2,outputFacialTransformationMatrixes:true}),{isCurrent,dispose:model=>model.close(),message:'Facial analysis initialization timed out. Please retry.'});
+      if(!mounted.current||runtime.current!==r){r.model.close();return;}
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
-      r.lastVideoTime=-1;r.lastRun=0;r.starting=false;
-      r.scan={wallStart:performance.now(),index:new QuickIndex({baseline,mode:baseline?'baseline':'generic'}),total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0,machine:createScanState(performance.now()/1000)};
-      setState('positioning');setHint('Fit your face in the circle');schedule(r);
-    }catch(error){if(!isCurrent())return;stop();setState('failed');setError(cameraError(error));}
+      r.lastVideoTime=-1;r.lastRun=0;r.starting=false;begin();tick();
+    } catch(e) {
+      if(!mounted.current||runtime.current!==r) return;
+      stop();setState('idle');
+      setError(e.name==='NotAllowedError'?'Camera permission denied. Allow access in browser settings and retry.':e.name==='NotFoundError'?'No camera found. Connect a camera and retry.':e.name==='NotReadableError'?'Camera is busy. Close other camera apps and retry.':e.message||'Could not start facial analysis.');
+    }
   }
+  function tick() {
+    const r=runtime.current,v=video.current;
+    if(!r.model||!v||!mounted.current) return;
+    const now=performance.now();
+    if(r.scan&&(now-r.scan.start)/1000>=MAX_SECONDS){finish();return;}
+    if(r.scan){
+      const elapsed=(now-r.scan.start)/1000;setSeconds(Math.floor(elapsed));
+      if(now-r.lastRun>1500){
+        setReading(null);setGood(false);r.good=false;setFeedback('Reading paused: no fresh camera frames.');
 
-  const view={state,error,hint,progress,paused,secondsRemaining:Math.max(0,Math.ceil(SCAN_SECONDS-progress*SCAN_SECONDS)),videoRef:video,overlayRef:overlay,start,cancel,active:['permission','loading','positioning','countdown','analyzing'].includes(state),hardCap:HARD_CAP_SECONDS,calibrating};
-  if(render)return render(view);
-  return <section><h1>{calibrating?'Calibrate when calm':'Calm index scan'}</h1><video ref={video} autoPlay playsInline muted/><canvas ref={overlay}/><p aria-live="polite">{error||hint}</p>{!view.active?<button onClick={start}>Start 10-second scan</button>:<button onClick={cancel}>Cancel</button>}</section>;
+        if(elapsed-r.scan.lastPlot>=1){r.scan.points.push({time:elapsed,value:null});r.scan.lastPlot=elapsed;setPoints([...r.scan.points]);}
+      }
+    }
+    if(v.readyState>=2&&v.currentTime!==r.lastVideoTime&&now-r.lastRun>=100) {
+      r.lastRun=now;r.lastVideoTime=v.currentTime;
+      try {
+        const processingStart=performance.now();
+        const result=r.model.detectForVideo(v,now);
+        const inferenceMs=performance.now()-processingStart;
+        const ctx=r.sampleCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,64,48);
+        const pixels=ctx.getImageData(0,0,64,48).data;
+        const landmarks=result.faceLandmarks[0];
+        const brightness=faceBrightness(pixels,64,48,landmarks);
+        const quality=assessQuickFrame(landmarks,result.faceLandmarks.length,brightness,r.previous);
+        r.previous=quality.center;
+        const pose=headPose(result.facialTransformationMatrixes?.[0]);
+        const facing=!pose||(Math.abs(pose[0])<=38&&Math.abs(pose[1])<=30);
+        r.good=quality.good&&facing;setGood(r.good);
+        setFeedback(quality.good&&!facing?'Face the camera directly for a usable reading.':quality.reason);
+        const canvas=overlay.current;
+        if(canvas){
+          canvas.width=v.videoWidth;canvas.height=v.videoHeight;
+          const draw=canvas.getContext('2d');draw.clearRect(0,0,canvas.width,canvas.height);draw.fillStyle=r.good?'#b7e6a1':'#ffd49b';
+          landmarks?.filter((_,i)=>i%5===0).forEach(p=>{draw.beginPath();draw.arc(p.x*canvas.width,p.y*canvas.height,1.8,0,Math.PI*2);draw.fill();});
+        }
+        if(r.scan) {
+          const elapsed=(now-r.scan.start)/1000;
+          const xy=landmarks?.map(p=>[p.x*v.videoWidth,p.y*v.videoHeight])||[];
+          const observation=r.scan.index.update(elapsed,xy,pose,quality.good,{brightness,qualityReason:quality.reason});
+          setSeconds(Math.floor(elapsed));setPhase(observation.phase);setReading(observation.value);
+          if(observation.reason)setFeedback(observation.reason);
+          if(observation.phase==='failed'){stop();setState('idle');setError(observation.reason);return;}
+          if(observation.phase==='live'){r.scan.total++;if(observation.valid){r.scan.valid++;r.scan.scores.push(observation.value);}}
+          // One representative sample per second; rejected seconds remain explicit gaps.
+          if(elapsed-r.scan.lastPlot>=1) {
+            r.scan.points.push({time:elapsed,value:observation.value});r.scan.lastPlot=elapsed;
+            setPerf({fps:(r.scan.allFrames+1)/Math.max(elapsed,1),inferenceMs:inferenceMs});
+            setPoints([...r.scan.points]);
+          } else if(observation.phase==='live'&&!observation.valid&&r.scan.points.length&&Number.isFinite(r.scan.points.at(-1).value)) {
+            r.scan.points.push({time:elapsed,value:null});r.scan.lastPlot=elapsed;setPoints([...r.scan.points]);
+          }
+          r.scan.allFrames++;r.scan.inferenceSum+=inferenceMs;r.scan.processingSum+=performance.now()-processingStart;
+        }
+      } catch {stop();setState('idle');setReading(null);setError('Facial analysis stopped unexpectedly. Please retry.');return;}
+    }
+    r.frame=requestAnimationFrame(tick);
+  }
+  function begin() {
+    const r=runtime.current;
+    r.scan={start:performance.now(),index:new QuickIndex(),scores:[],points:[],lastPlot:-1,total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0};
+    setSeconds(0);setPoints([]);setReading(null);setPhase('live');setPerf(null);setState('scanning');
+    r.timer=setTimeout(()=>{if(runtime.current===r&&mounted.current)finish();},SCAN_SECONDS*1000);
+  }
+  const active=['loading','ready','scanning'].includes(state);
+  return <>
+    <section className="panel">
+      <h2>10-second camera scan</h2>
+      <p>Look at the camera for 10 seconds with a relaxed, neutral expression. Your score opens automatically. Video stays in your browser.</p>
+      <p className="fine">Tip: For repeatable readings across sessions, keep your head at eye level, relax your brow and jaw, and face the camera directly.</p>
+      <div className={`scan-stage ${state==='scanning'?'is-scanning':''} ${state==='loading'?'is-loading':''}`}>
+        <div className="scan-orbit" style={{'--scan-duration':`${SCAN_SECONDS}s`}}>
+          <svg className="scan-progress" viewBox="0 0 320 320" aria-hidden="true"><circle className="scan-track" cx="160" cy="160" r="153"/><circle className="scan-fill" cx="160" cy="160" r="153"/></svg>
+          <div className="camera circle-camera"><video ref={video} autoPlay playsInline muted/><canvas ref={overlay} aria-hidden="true"/>
+            {state==='scanning'&&<><div className="scan-sweep" aria-hidden="true"/><div className="scan-grid" aria-hidden="true"/></>}
+            {!active&&<div className="camera-placeholder"><span className="face-outline" aria-hidden="true">◎</span><span>Position your face here</span></div>}
+          </div>
+        </div>
+        <p className="scan-title" role="status">{state==='scanning'?'Scanning your face…':state==='loading'?'Preparing your scan…':'Ready when you are'}</p>
+        {state==='scanning'&&<><div className="scan-dots" aria-hidden="true"><i/><i/><i/></div><p className="scan-countdown">{Math.max(0,SCAN_SECONDS-seconds)} seconds remaining</p></>}
+        <p className={good?'quality good':'quality'}>{state==='loading'?'Starting camera…':active?feedback:'Look straight ahead with even lighting.'}</p>
+      </div>
+      {error&&<p role="alert" className="camera-error">{error}</p>}
+      {!active&&<><button className="primary" onClick={start}>Start 10-second scan</button><p className="fine">By starting, you allow local camera processing for this scan.</p></>}
+      {active&&<button className="secondary" onClick={()=>{stop();setState('idle');setReading(null);setSeconds(0);setPoints([]);}}>Cancel and stop camera</button>}
+    </section>
+
+  </>;
 }

@@ -1,82 +1,105 @@
-import React,{Suspense,lazy,useEffect,useState} from 'react';
+import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import './pause-ui.css';
-import ScanScreen from './components/ScanScreen.jsx';
-import ResultCard from './components/ResultCard.jsx';
-import {readCameraSessions,saveCameraSession,deleteCameraSession} from './cameraSessions.js';
-import {readBaseline,resetBaseline,saveBaseline} from './baselineStorage.js';
-import {initializeMonitoring} from './monitoring.js';
-import {registerSW} from 'virtual:pwa-register';
+import './style.css';
+import CameraScan from './CameraScan';
+import LiveGraph from './LiveGraph';
+import Experiment from './Experiment';
+import {readCameraSessions,saveCameraSession,deleteCameraSession} from './cameraSessions';
 
-const HistoryPage=lazy(()=>import('./pages/HistoryPage.jsx'));
-const Experiment=lazy(()=>import('./Experiment.jsx'));
-const PrivacyPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.PrivacyPage})));
-const AboutPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.AboutPage})));
-const ONBOARDING_KEY='pause.onboarded.v1';
-
-function wasOnboarded(){try{return localStorage.getItem(ONBOARDING_KEY)==='1'}catch{return false}}
-function setOnboarded(){try{localStorage.setItem(ONBOARDING_KEY,'1')}catch{}}
-
-function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline}){
-  const flags=Object.entries(result.qualityFlags||{}).filter(([,value])=>value).map(([key])=>key);
-  return <section className="result-screen"><h1>Calm index result</h1><ResultCard status={result.status||result.quality} score={result.average} windows={result.windowScores||result.points?.map(p=>p.value)||[]} reason={result.failReason||result.reason} warnings={result.warnings||[]} onRetry={onRetry} onDone={onDone}/>
-    {result.status!=='failed'&&Number.isFinite(result.average)&&<div className="result-tools">
-      <p className="mode-line">{result.mode==='baseline'?'Compared with your calm baseline':result.mode==='calibration'?'Calm baseline saved':'Compared with an average face reference'}</p>
-      {result.range&&<p className="range-line">Likely scan range: {result.range[0].toFixed(1)}–{result.range[1].toFixed(1)}</p>}
-      <button className="pz-btn pz-btn-primary" onClick={onSave} disabled={isSaved}>{isSaved?'Result saved':'Save this result'}</button>
-      <button className="pz-btn pz-btn-quiet" onClick={onCalibrate}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>
-      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd><dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd></dl></details>
-    </div>}
-  </section>;
-}
-
-function App(){
-  const lab=new URLSearchParams(location.search).get('lab')==='1';
-  const fixture=import.meta.env.DEV&&new URLSearchParams(location.search).get('fixture')==='result'?{id:'e2e-result',created_at:'2026-01-01T00:00:00.000Z',average:6.2,status:'ok',quality:'good',mode:'generic',algoVersion:'quick-2.0',range:[5.8,6.6],windowScores:[6,6.1,6.2,6.3,6.2,6.1,6.2,6.3,6.4],coveragePercent:100,qualityFlags:{}}:null;
-  const [screen,setScreen]=useState(()=>fixture?'Result':wasOnboarded()?'Scan':'Onboarding');
-  const [result,setResult]=useState(fixture),[calibrating,setCalibrating]=useState(false);
-  const [baseline,setBaselineState]=useState(()=>readBaseline());
-  const [sessions,setSessions]=useState(()=>{try{return readCameraSessions()}catch{return[]}});
-  const [notice,setNotice]=useState(''),[error,setError]=useState('');
-  useEffect(()=>{
-    initializeMonitoring();registerSW({immediate:true});
-    const preload=()=>{const link=document.createElement('link');link.rel='prefetch';link.href=`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`;document.head.appendChild(link)};
-    const id=globalThis.requestIdleCallback?.(preload,{timeout:20000})??setTimeout(preload,15000);
-    return()=>globalThis.cancelIdleCallback?.(id)??clearTimeout(id);
-  },[]);
-  const navigate=next=>{setScreen(next);setNotice('');setError('')};
-  function complete(session){
-    if(calibrating&&session.status!=='failed'&&session.featureStats){
-      const saved=saveBaseline(session.featureStats);setBaselineState(saved);session.mode='calibration';
-      setNotice(saved?'Your calm baseline is active.':'The baseline could not be saved in this browser.');
-    }
-    setResult(session);setCalibrating(false);setScreen('Result');
+function App() {
+  const [screen,setScreen]=useState('Live'),[result,setResult]=useState(null);
+  const [storageConsent,setStorageConsent]=useState(false),[notice,setNotice]=useState('');
+  const [error,setError]=useState('');
+  const [sessions,setSessions]=useState(()=>{try{return readCameraSessions();}catch{return[];}});
+  function navigate(next){setNotice('');setError('');setScreen(next);}
+  function completed(session){setResult(session);setStorageConsent(false);setScreen('Results');setNotice('Session finished. Camera stopped.');}
+  function save(){
+    if(!result||!storageConsent)return;
+    try{saveCameraSession(result);setSessions(readCameraSessions());setNotice('Graph and summary saved in this browser.');setError('');}
+    catch{setError('Browser storage is unavailable or full. Your session is still shown here.');}
   }
-  function startCalibration(){setCalibrating(true);setResult(null);navigate('Scan')}
-  function save(){try{saveCameraSession(result);setSessions(readCameraSessions());setNotice('Result saved in this browser.')}catch{setError('The result could not be saved. Clear some browser storage, then try again.')}}
-  function remove(id){try{deleteCameraSession(id);setSessions(readCameraSessions());setNotice('Saved result deleted.')}catch{setError('The saved result could not be deleted. Reload the page, then try again.')}}
-  function clearBaseline(){if(resetBaseline()){setBaselineState(null);setNotice('Your calm baseline was reset.')}else setError('The baseline could not be reset. Check browser storage settings, then try again.')}
-  const saved=!!result&&sessions.some(row=>row.id===result.id);
-  return <div className="app-shell">
-    <header className="site-header"><button className="brand" onClick={()=>navigate('Scan')}>Pause</button><nav className="main-nav" aria-label="Primary"><button aria-current={screen==='Scan'?'page':undefined} onClick={()=>navigate('Scan')}>Scan</button><button aria-current={screen==='History'?'page':undefined} onClick={()=>navigate('History')}>History</button>{lab&&<button aria-current={screen==='Lab'?'page':undefined} onClick={()=>navigate('Lab')}>Lab</button>}</nav></header>
-    {notice&&<p className="notice" role="status">{notice}</p>}{error&&<p className="error-banner" role="alert">{error}</p>}
-    <div className="app-content"><Suspense fallback={<main className="page"><p>Loading…</p></main>}>
-      {screen==='Onboarding'&&<main className="page onboarding"><h1>A quiet moment to check in</h1><p>Pause gives you an experimental Calm index after a 10-second camera scan. Processing stays on your device, and the result cannot tell how stressed you feel.</p><button className="pz-btn pz-btn-primary" onClick={()=>{setOnboarded();navigate('Scan')}}>Continue to scan</button></main>}
-      {screen==='Scan'&&<ScanScreen onComplete={complete} baseline={calibrating?null:baseline} calibrating={calibrating}/>} 
-      {screen==='Result'&&result&&<ResultScreen result={result} isSaved={saved} onRetry={()=>navigate('Scan')} onDone={()=>navigate('History')} onSave={save} onCalibrate={startCalibration} baseline={baseline}/>} 
-      {screen==='History'&&<HistoryPage sessions={sessions} onView={session=>{setResult(session);navigate('Result')}} onDelete={remove} onScan={()=>navigate('Scan')}/>} 
-      {screen==='Settings'&&<main className="page settings"><h1>Settings</h1><section className="pz-panel"><h2>Personal baseline</h2><p>Calibrate when calm so future scores compare you with your own calm face.</p><button className="pz-btn pz-btn-primary" onClick={startCalibration}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>{baseline&&<button className="pz-btn pz-btn-quiet" onClick={clearBaseline}>Reset baseline</button>}</section></main>}
-      {screen==='Privacy'&&<PrivacyPage/>}{screen==='About'&&<AboutPage/>}{screen==='Lab'&&lab&&<main className="page lab-page"><h1>Lab</h1><Experiment/></main>}
-    </Suspense></div>
-    <footer className="site-footer"><button onClick={()=>navigate('Privacy')}>Privacy</button><button onClick={()=>navigate('About')}>About this index</button><button onClick={()=>navigate('Settings')}>Settings</button></footer>
+  function remove(id){
+    if(!window.confirm('Delete this saved camera session permanently?'))return;
+    try{deleteCameraSession(id);setSessions(readCameraSessions());setNotice('Session deleted.');}
+    catch{setError('Could not delete this session. Please retry.');}
+  }
+  const isSaved=result&&sessions.some(s=>s.id===result.id);
+  return <div className="shell">
+    <header><a className="brand" href="#" onClick={()=>navigate('Overview')}>◉ pause<span>LIVE FACIAL CHECK-IN</span></a><div className="tag">On-device · Non-diagnostic</div></header>
+    <nav aria-label="Main navigation">{['Overview','Live','Results','History','Experiment'].map(item=><button key={item} aria-current={screen===item?'page':undefined} className={screen===item?'active':''} onClick={()=>navigate(item)}>{item==='Experiment'?'About Model':item}</button>)}</nav>
+    <main><p className="save-notice" role="status">{notice}</p>{error&&<p role="alert" className="camera-error">{error}</p>}
+      {screen==='Overview'&&<>
+        <p className="eyebrow">LIVE CAMERA · ON-DEVICE</p><h1>Pause. Watch.<br/><em>Explore your facial patterns.</em></h1>
+        <p className="intro">Look at the camera for 10 seconds, then see your indicative tension score automatically.</p>
+        <button className="primary" onClick={()=>navigate('Live')}>Open 10-second scan →</button>
+        <div className="cards"><article><span>01 / SCAN</span><h2>Look at the camera</h2><p>One 10-second scan. No manual surveys or wearables.</p></article><article><span>02 / SCORE</span><h2>See your result</h2><p>Your score opens automatically when the scan ends.</p></article><article><span>03 / PRIVATE</span><h2>On your device</h2><p>Video is never recorded or uploaded.</p></article></div>
+      </>}
+      {screen==='Live'&&<><p className="eyebrow">REAL-TIME FACIAL BEHAVIOR</p><h1>Your 10-second scan.</h1><CameraScan onComplete={completed}/></>}
+      {screen==='Results'&&<><p className="eyebrow">SESSION REVIEW</p><h1>Your score.</h1>{result?<>
+        <p>{new Date(result.created_at).toLocaleString()} · {Math.round(result.durationSeconds)} seconds</p>
+        <section className="panel"><h2>Facial index</h2><p className="rating">{Number.isFinite(result.average)?result.average.toFixed(1):'Scan incomplete'}{Number.isFinite(result.average)&&<small> / 10</small>}</p><p><strong>Scale:</strong> 0 = highest tension deviation · 5 = neutral baseline mean · 10 = most relaxed</p><p className="fine">{result.quality==='good'?'Calculated from 10-second on-device facial pattern analysis relative to a neutral baseline.':(result.reason||'Not enough usable camera frames. Try again with even lighting and your face in view.')}</p></section>
+        {result.quality==='good'&&<section className="panel">
+          <h2>Why scores can vary between scans</h2>
+          <p>A score near 5 corresponds to neutral baseline composure. Scores moving toward 0 reflect subtle facial contraction (such as brow furrowing, lip compression, or jaw tightening). Engaging in focused screen work or reading over 5–10 minutes commonly introduces subconscious micro-tension or posture shifts.</p>
+          {result.features&&<details>
+            <summary style={{cursor:'pointer',fontWeight:600,padding:'6px 0'}}>View facial tension observations</summary>
+            <div style={{marginTop:'12px',fontSize:'13px'}}>
+              <p><strong>Upper face (brow & forehead):</strong> {result.features.brow_furrow > -0.56 ? 'Subtle furrowing or contraction detected' : 'Neutral / uncontracted'}</p>
+              <p><strong>Lower face (mouth & lips):</strong> {result.features.lip_press > -0.26 ? 'Slight vertical compression detected' : 'Neutral / relaxed'}</p>
+              <p><strong>Jaw & cheek composure:</strong> {result.features.jaw_clench > 0.92 ? 'Elevated tension detected across jaw region' : 'Neutral / relaxed'}</p>
+              <p><strong>Expression symmetry:</strong> {Math.abs(result.features.lip_corner) > 0.08 ? 'Asymmetrical micro-expression' : 'Balanced composure'}</p>
+              <p className="fine" style={{marginTop:'8px'}}>Qualitative behavioral pattern indicators for personal awareness. Not a clinical or diagnostic assessment.</p>
+            </div>
+          </details>}
+        </section>}
+        {Number.isFinite(result.average)&&<LiveGraph points={result.points}/>}
+        <section className="panel">
+          <h2>Save this session?</h2>
+          <p>Only elapsed-time index samples and this summary are saved. Anyone using this browser profile can view them; clearing site data erases them.</p>
+          {isSaved?<p>This session is saved.</p>:<>
+            <label className="consent"><input type="checkbox" checked={storageConsent} onChange={e=>setStorageConsent(e.target.checked)}/> I agree to save this graph and summary in this browser.</label>
+            <button className="primary" disabled={!storageConsent} onClick={save}>Save session</button>
+          </>}
+        </section>
+        <button className="primary" onClick={()=>navigate('Live')}>Start another session →</button>
+      </>:<><p>Finish a live session or choose a saved graph from History.</p><button className="primary" onClick={()=>navigate('Live')}>Open live camera</button></>}</>}
+      {screen==='History'&&<><p className="eyebrow">SAVED CAMERA SESSIONS</p><h1>Your previous graphs.</h1><section className="panel"><h2>{sessions.length?sessions.length+' saved sessions':'No camera sessions saved yet'}</h2>{sessions.map(s=><div className="history-row" key={s.id}><div><strong>{Number.isFinite(s.average)?s.average.toFixed(1)+'/10 · average index':'Insufficient signal coverage'}</strong><p>{new Date(s.created_at).toLocaleString()} · {s.coveragePercent.toFixed(0)}% coverage</p></div><div><button className="secondary" onClick={()=>{setResult(s);navigate('Results');}}>View graph</button><button className="secondary" onClick={()=>remove(s.id)}>Delete</button></div></div>)}{!sessions.length&&<button className="primary" onClick={()=>navigate('Live')}>Start a live session</button>}</section></>}
+      {screen==='Experiment'&&<Experiment/>}
+    </main>
+    <footer>Personal wellbeing check-in tool. Not a medical device or diagnostic test. Camera processing runs strictly on-device in temporary browser memory with zero video recording or uploads.</footer>
   </div>;
 }
 
-class ErrorBoundary extends React.Component{
-  constructor(props){super(props);this.state={failed:false}}
-  static getDerivedStateFromError(){return{failed:true}}
-  componentDidCatch(error,info){console.error('Pause render error',error,info)}
-  render(){return this.state.failed?<main className="page"><h1>Pause could not continue</h1><p>Reload the page to start again.</p><button className="pz-btn pz-btn-primary" onClick={()=>location.reload()}>Reload</button></main>:this.props.children}
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('App render error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="shell">
+          <header><a className="brand" href="./">◉ pause<span>ERROR</span></a></header>
+          <main>
+            <h1>Something went wrong.</h1>
+            <p className="camera-error">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+            <button className="primary" onClick={() => window.location.reload()}>Reload app</button>
+          </main>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);
+createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App/>
+  </ErrorBoundary>
+);

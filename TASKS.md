@@ -14,9 +14,11 @@ Current MVP: a production-ready, deployed PWA featuring a 10-second on-device ca
    - Replaced pseudo-confidence intervals with median absolute deviation (MAD) spread bounds.
    - Cleaned up state machine with 10-second countdown and 60% valid-frame gate.
    - Full Python parity mirror (`stress_math/deployed_mirror.py`) verified against browser scoring.
-2. **Step 2: Calm UI redesign**:
-   - Replaced busy developer graph with calm, accessible UI (`pause-ui.css`).
-   - Integrated `ResultCard`, `ScanScreen`, `HistoryPage`, and `InfoPage` with subtle motion, dark mode support, and WCAG AA contrast.
+2. **Frontend UI restored**:
+   - Reverted UI to the preferred multi-tab layout (`Overview`, `Live`, `Results`, `History`, `About Model`) with `style.css`.
+   - Restored circular camera viewfinder with circular progress ring SVG, scan sweep, scan grid, and live facial landmark dots on the canvas overlay.
+   - Restored `LiveGraph`, tension score card, and qualitative facial observations on the Results page.
+   - All math, 3-feature scoring algorithms, and MediaPipe logic kept strictly untouched.
 3. **Step 3: PWA offline support, monitoring stubs, & CI automation**:
    - Configured `vite-plugin-pwa` with offline caching of app shell and MediaPipe model.
    - Hardened Content Security Policy (CSP) headers and added Sentry/Plausible telemetry stubs.
