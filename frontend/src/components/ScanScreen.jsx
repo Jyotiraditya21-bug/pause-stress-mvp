@@ -1,3 +1,4 @@
+import React from 'react';
 import CameraScan from '../CameraScan.jsx';
 
 export default function ScanScreen({onComplete,baseline,calibrating=false}) {

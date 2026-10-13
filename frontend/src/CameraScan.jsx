@@ -3,6 +3,7 @@ import {assessQuickFrame,faceBrightness} from './scanMetrics.js';
 import {QuickIndex,geometry,headPose,SCAN_SECONDS} from './liveIndex.js';
 import {awaitResource} from './resourceWait.js';
 import {advanceScanState,createScanState,HARD_CAP_SECONDS} from './scanState.js';
+import {trackEvent} from './monitoring.js';
 
 function cameraError(error) {
   if(!globalThis.isSecureContext)return 'Camera access needs a secure connection. Open the HTTPS site or use localhost.';
@@ -50,6 +51,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     if(capped&&summary.status==='ok'){
       summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
     }
+    trackEvent(summary.status==='failed'?'scan_failed':'scan_result',{status:summary.status,reason:summary.failReason||summary.reason||''});
     setTimeout(()=>{
       if(!mounted.current)return;
       stop();setState(summary.status==='failed'?'failed':'result');onComplete(summary);
@@ -111,6 +113,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
   }
 
   async function start(){
+    trackEvent('scan_started');
     stop();setError('');setProgress(0);setPaused(false);setState('permission');setHint('Starting camera…');
     const r=runtime.current;r.starting=true;const isCurrent=()=>mounted.current&&runtime.current===r;
     try{

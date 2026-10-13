@@ -1,3 +1,5 @@
+import React from 'react';
+
 function Trend({sessions}){
   const rows=[...sessions].filter(s=>Number.isFinite(s.average)).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   if(!rows.length)return null;

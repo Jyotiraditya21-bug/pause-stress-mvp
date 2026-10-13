@@ -1,10 +1,12 @@
-import React,{Suspense,lazy,useState} from 'react';
+import React,{Suspense,lazy,useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import './pause-ui.css';
 import ScanScreen from './components/ScanScreen.jsx';
 import ResultCard from './components/ResultCard.jsx';
 import {readCameraSessions,saveCameraSession,deleteCameraSession} from './cameraSessions.js';
 import {readBaseline,resetBaseline,saveBaseline} from './baselineStorage.js';
+import {initializeMonitoring} from './monitoring.js';
+import {registerSW} from 'virtual:pwa-register';
 
 const HistoryPage=lazy(()=>import('./pages/HistoryPage.jsx'));
 const Experiment=lazy(()=>import('./Experiment.jsx'));
@@ -30,11 +32,18 @@ function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline
 
 function App(){
   const lab=new URLSearchParams(location.search).get('lab')==='1';
-  const [screen,setScreen]=useState(()=>wasOnboarded()?'Scan':'Onboarding');
-  const [result,setResult]=useState(null),[calibrating,setCalibrating]=useState(false);
+  const fixture=import.meta.env.DEV&&new URLSearchParams(location.search).get('fixture')==='result'?{id:'e2e-result',created_at:'2026-01-01T00:00:00.000Z',average:6.2,status:'ok',quality:'good',mode:'generic',algoVersion:'quick-2.0',range:[5.8,6.6],windowScores:[6,6.1,6.2,6.3,6.2,6.1,6.2,6.3,6.4],coveragePercent:100,qualityFlags:{}}:null;
+  const [screen,setScreen]=useState(()=>fixture?'Result':wasOnboarded()?'Scan':'Onboarding');
+  const [result,setResult]=useState(fixture),[calibrating,setCalibrating]=useState(false);
   const [baseline,setBaselineState]=useState(()=>readBaseline());
   const [sessions,setSessions]=useState(()=>{try{return readCameraSessions()}catch{return[]}});
   const [notice,setNotice]=useState(''),[error,setError]=useState('');
+  useEffect(()=>{
+    initializeMonitoring();registerSW({immediate:true});
+    const preload=()=>{const link=document.createElement('link');link.rel='prefetch';link.href=`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`;document.head.appendChild(link)};
+    const id=globalThis.requestIdleCallback?.(preload,{timeout:20000})??setTimeout(preload,15000);
+    return()=>globalThis.cancelIdleCallback?.(id)??clearTimeout(id);
+  },[]);
   const navigate=next=>{setScreen(next);setNotice('');setError('')};
   function complete(session){
     if(calibrating&&session.status!=='failed'&&session.featureStats){

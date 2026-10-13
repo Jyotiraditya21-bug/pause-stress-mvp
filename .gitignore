@@ -3,7 +3,23 @@ dist/
 .venv/
 .env
 *.sqlite3
+*.sqlite
+*.db
 __pycache__/
+datasets/
+data/
+recordings/
+cache/
+stress_math/cache/
+stress_math/results/
+*.mp4
+*.mov
+*.avi
+*.y4m
+frontend/test-results/
+frontend/playwright-report/
+frontend/.lighthouseci/
+validation-*.png
 
 .DS_Store
 
