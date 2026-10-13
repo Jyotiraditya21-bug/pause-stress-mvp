@@ -11,8 +11,8 @@ export default function LiveGraph({points=[],live=false}) {
   if(segment.length) paths.push(segment);
   return <section className="panel trend live-graph">
     <h2>{live ? 'Live facial index' : 'Facial index over this session'}</h2>
-    <p>Requested scale: <strong>0 = high stress · 10 = no stress</strong>. These are experimental axis labels, not verified stress measurements.</p>
-    <svg viewBox="0 0 740 300" role="img" aria-label="Experimental facial index versus elapsed seconds. Zero is the high-stress end and ten is the no-stress end. Gaps indicate unavailable readings.">
+    <p><strong>Calm index:</strong> higher means less tension-like geometry relative to the selected reference.</p>
+    <svg viewBox="0 0 740 300" role="img" aria-label="Experimental Calm index versus elapsed seconds. Gaps indicate unavailable readings.">
       {[0,2.5,5,7.5,10].map(v=><g key={v}><line x1="58" x2="668" y1={y(v)} y2={y(v)} stroke="#dbe2d8" strokeDasharray={v===5?'5 5':undefined}/><text x="40" y={y(v)+4} textAnchor="end" fill="#506b61" fontSize="12">{v}</text></g>)}
       {paths.map((path,i)=>path.length===1 ? <circle key={i} cx={x(path[0].time)} cy={y(path[0].value)} r="3" fill="#406e50"/> : <polyline key={i} points={path.map(p=>`${x(p.time)},${y(p.value)}`).join(' ')} fill="none" stroke="#406e50" strokeWidth="3"/>)}
       {[0,.5,1].map(r=><text key={r} x={x(end*r)} y="264" textAnchor={r===0?'start':r===1?'end':'middle'} fill="#506b61" fontSize="12">{Math.round(end*r)}s</text>)}

@@ -39,7 +39,7 @@ function App(){
   const [sessions,setSessions]=useState(()=>{try{return readCameraSessions()}catch{return[]}});
   const [notice,setNotice]=useState(''),[error,setError]=useState('');
   useEffect(()=>{
-    initializeMonitoring();registerSW({immediate:true});
+    initializeMonitoring().catch(()=>{});registerSW({immediate:true});
     const preload=()=>{const link=document.createElement('link');link.rel='prefetch';link.href=`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`;document.head.appendChild(link)};
     const id=globalThis.requestIdleCallback?.(preload,{timeout:20000})??setTimeout(preload,15000);
     return()=>globalThis.cancelIdleCallback?.(id)??clearTimeout(id);

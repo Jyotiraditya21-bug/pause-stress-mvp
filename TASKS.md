@@ -282,3 +282,17 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Updated stress_math README and dependencies documentation; frontend source unchanged.
 - [x] Verification: 36 Python tests passed, one optional HF inference test skipped because Torch/Transformers are absent in this environment. Pulse smoke and the new Node/Python parity tests passed.
 - [ ] Real-video evaluation remains unverified: no labeled evaluation videos were provided in this worktree. The local MediaPipe detector smoke attempt could not create an NSOpenGL context in this execution environment. Offline pose estimates use OpenCV solvePnP, so frames near browser pose thresholds may classify differently.
+
+## Production hardening — 2026-10-13
+
+- [x] Create `prod-hardening`; keep `main` untouched by the production branch work.
+- [x] Change generic mode to three dynamic geometry features and add versioned, expiring four-feature personal baselines.
+- [x] Add MAD-based result ranges, nine explicit window values, actionable warnings, failure status and privacy-safe quality flags.
+- [x] Add the quality-gated countdown, pause/resume hints, independent 25-second wall-clock cap, video-frame callback path and clean camera/model disposal.
+- [x] Keep the Python deployed mirror and D0/D1 evaluator aligned with quick-2.0; deterministic JavaScript/Python parity passes within 1e-6.
+- [x] Replace the main UI with the mobile-first Scan, Results and History flow; add onboarding, calibration/reset, settings, Privacy and About pages.
+- [x] Add PWA precaching, lazy MediaPipe loading, error boundary, CSP/security headers, optional scrubbed Sentry and score-free Plausible events.
+- [x] Add Playwright/axe/Lighthouse configuration, GitHub Actions jobs, Cloudflare deployment instructions and validation roadmap.
+- [x] Verification available in this environment: 27 frontend unit tests passed, production PWA build passed, and 36 Python tests passed with one optional HF dependency smoke test skipped.
+- [ ] Playwright/axe, responsive browser checks, offline reload and Lighthouse scores were not executed locally because the sandbox could not bind the test server and approval review was unavailable. CI is configured to run them.
+- [ ] No real labeled-dataset accuracy, repeatability PASS or model-licensing completion is claimed; all remain NOT DONE in `docs/VALIDATION_TODO.md`.

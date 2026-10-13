@@ -31,6 +31,11 @@ test('cancel releases the video element',async({page})=>{
   expect(await page.locator('video').evaluate(v=>v.srcObject===null)).toBeTruthy();
 });
 
+test('fake-camera scan reaches a result or a clear failed state',async({page})=>{
+  await onboard(page);await page.goto('/');await page.getByRole('button',{name:'Start 10-second scan'}).click();
+  await expect(page.getByText(/We couldn't get a reading|Calm signs|In between|Tense signs/)).toBeVisible({timeout:35000});
+});
+
 test('result can be saved, viewed accessibly, and deleted from History',async({page})=>{
   await onboard(page);await page.goto('/?fixture=result');
   await expect(page.getByLabel(/Calm index 6.2 out of 10/)).toBeVisible();await expectAccessible(page);
@@ -44,3 +49,10 @@ test('personal baseline can be reset',async({page})=>{
   await page.goto('/');await page.getByRole('button',{name:'Settings'}).click();await page.getByRole('button',{name:'Reset baseline'}).click();
   await expect(page.getByText('Your calm baseline was reset.')).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('pause.baseline.v1'))).toBeNull();
 });
+
+for(const viewport of [{width:360,height:640},{width:390,height:844},{width:768,height:1024},{width:1280,height:800}]){
+  test(`scan has no horizontal overflow at ${viewport.width}x${viewport.height}`,async({page})=>{
+    await onboard(page);await page.setViewportSize(viewport);await page.goto('/');
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  });
+}

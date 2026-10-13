@@ -15,7 +15,7 @@ This document lists the mandatory empirical evidence and reviews required before
   - Compute paired AUC differences, subject-cluster bootstrap 95% confidence intervals, and permutation null tests.
   - Evaluate D0 (3-feature generic mode: brow furrow, lip press, lip corner).
   - Evaluate D1 (4-feature personal baseline mode: including static facial aspect ratio / jaw clench).
-  - Evaluate D2 (fusion / multi-modal extension if authorized).
+  - Evaluate D2 (within-clip dynamics from variance across one-second feature windows).
 
 ---
 

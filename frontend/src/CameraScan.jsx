@@ -51,7 +51,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     if(capped&&summary.status==='ok'){
       summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
     }
-    trackEvent(summary.status==='failed'?'scan_failed':'scan_result',{status:summary.status,reason:summary.failReason||summary.reason||''});
+    trackEvent(summary.status==='failed'?'scan_failed':'scan_result',{status:summary.status,reason:summary.status==='failed'?'acquisition_failed':summary.status==='limited'?'limited_confidence':'accepted'});
     setTimeout(()=>{
       if(!mounted.current)return;
       stop();setState(summary.status==='failed'?'failed':'result');onComplete(summary);
@@ -130,6 +130,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
       r.lastVideoTime=-1;r.lastRun=0;r.starting=false;
       r.scan={wallStart:performance.now(),index:new QuickIndex({baseline,mode:baseline?'baseline':'generic'}),total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0,machine:createScanState(performance.now()/1000)};
+      r.timer=setTimeout(()=>{if(runtime.current===r&&mounted.current)complete(true)},HARD_CAP_SECONDS*1000);
       setState('positioning');setHint('Fit your face in the circle');schedule(r);
     }catch(error){if(!isCurrent())return;stop();setState('failed');setError(cameraError(error));}
   }
