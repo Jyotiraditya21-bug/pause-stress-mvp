@@ -54,6 +54,8 @@ jobs:
         working-directory: frontend
       - run: npm run test:e2e
         working-directory: frontend
+      - run: npm run test:offline
+        working-directory: frontend
   lighthouse:
     runs-on: ubuntu-latest
     continue-on-error: true

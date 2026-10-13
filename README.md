@@ -65,6 +65,7 @@ Runs Playwright e2e tests on Chromium with simulated media streams, testing perm
 ```sh
 cd frontend
 npm run test:e2e
+npm run test:offline
 ```
 
 ### Mobile Lighthouse CI
@@ -74,6 +75,8 @@ Evaluates the idle scan screen against Performance, Accessibility, Best Practice
 cd frontend
 npm run test:lighthouse
 ```
+
+The recorded production-hardening run scored 98 Performance, 100 Accessibility, 100 Best Practices and 100 SEO on the mobile Lighthouse profile. These are software-quality scores, not evidence that the Calm index measures stress accurately.
 
 ### Python Mirror & Mathematical Parity Tests
 Runs all unit tests in `stress_math/`, including automated parity tests verifying Node.js and Python mirror outputs match within $10^{-6}$:

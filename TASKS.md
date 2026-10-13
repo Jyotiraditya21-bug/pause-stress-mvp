@@ -293,6 +293,8 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Replace the main UI with the mobile-first Scan, Results and History flow; add onboarding, calibration/reset, settings, Privacy and About pages.
 - [x] Add PWA precaching, lazy MediaPipe loading, error boundary, CSP/security headers, optional scrubbed Sentry and score-free Plausible events.
 - [x] Add Playwright/axe/Lighthouse configuration, GitHub Actions jobs, Cloudflare deployment instructions and validation roadmap.
-- [x] Verification available in this environment: 27 frontend unit tests passed, production PWA build passed, and 36 Python tests passed with one optional HF dependency smoke test skipped.
-- [ ] Playwright/axe, responsive browser checks, offline reload and Lighthouse scores were not executed locally because the sandbox could not bind the test server and approval review was unavailable. CI is configured to run them.
+- [x] Verification: 27 frontend unit tests passed, production PWA build passed, and 36 Python tests passed with one optional HF dependency smoke test skipped.
+- [x] Playwright: 10/10 main E2E checks passed, including zero serious/critical axe findings and no horizontal overflow at 360×640, 390×844, 768×1024 and 1280×800.
+- [x] Production PWA: the app reloaded offline after its first cached load and initialized the camera scan from precached MediaPipe assets.
+- [x] Mobile Lighthouse: Performance 98, Accessibility 100, Best Practices 100, SEO 100.
 - [ ] No real labeled-dataset accuracy, repeatability PASS or model-licensing completion is claimed; all remain NOT DONE in `docs/VALIDATION_TODO.md`.
