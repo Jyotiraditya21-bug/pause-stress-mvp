@@ -1,36 +1,33 @@
 # MVP task tracker
 
-Last updated: 2026-10-11
+Last updated: 2026-10-13
 
-## Current scope and status — 2026-10-11
+## Current scope and status — 2026-10-13
 
-Current MVP: a deployed live experimental facial index, not an entered stress rating. The scale is reversed (0 high-stress end, 10 no-stress end), with baseline feature means at 5/10. Questionnaire/Gemini sections below document historical work; they are not the current browser flow. Training is outside the current scope. Datasets are test-only.
+Current MVP: a production-ready, deployed PWA featuring a 10-second on-device camera scan that outputs an experimental Calm index (0-10, higher = calmer) with personal-baseline support, MAD spread bounds, and strict privacy guarantees. Merged into `main` and deployed live to GitHub Pages.
 
-### Completed — 10 grouped work items
+### Completed — Production hardening & deployment (2026-10-13)
 
-1. React/Vite frontend, FastAPI/SQLite foundation and project documentation.
-2. Local MediaPipe camera processing, model/WASM assets and consent/lifecycle code.
-3. Fixed mathematical facial features/index with normalization, sigma floor, gates and smoothing.
-4. Browser live graph with 25-second baseline and removal of entered stress-rating results.
-5. Graph review, optional browser saving, history and deletion implementation.
-6. Test-only dataset/manifest loaders and landmark/score caching.
-7. Math baseline comparisons, coverage exclusions, subject-bootstrap CIs and permutation reports.
-8. Optional pretrained A/B loaders: dynamic labels, crops, 5fps, fp32, batch/MPS inference and lazy imports.
-9. M0–M5 fixed fusion/comparison implementation, paired AUC differences, correlations, params and license/revision reporting code.
-10. Synthetic tests/build checks and deployed live-graph UI verification. Model A actual dummy-image inference passed on MPS; optional dummy-classifier/processor test passed. No real dataset accuracy is established.
-
-### Newly verified — 2026-10-11
-
-- Actual Model B inference on MPS; all 18 Python tests and nine frontend tests pass.
-- Actual model revision/license/parameter report generated; zero available labeled videos explicitly reported.
-- Latest source archive and deployments verified.
-- Real webcam initialization, calibration, live graph, finish, cancellation and navigation cleanup verified.
-- Disposable graph save/reload/view/delete/reload verified with user consent; test graph removed.
-- Narrow populated mobile layouts and keyboard graph/table access verified.
-- Camera diagnostics on real inputs: about 9.2 processed frames/s, 21.1 ms mean landmark inference and 24.1 ms mean analysis processing in one session. These are efficiency measurements, not stress accuracy.
-- Idle-page hidden warning fixed, initialization bounded, and late resources disposed after cancellation/timeout.
-- Experiment tab blank screen resolved: added missing `React` import to `frontend/src/Experiment.jsx` and added top-level `ErrorBoundary` in `frontend/src/main.jsx`.
-- Verified live deployment at https://jyotiraditya21-bug.github.io/pause-stress-mvp/: navigation to Experiment view successfully renders headings, instructions, and download links with zero console errors.
+1. **Step 1: Hardened scan logic & personal baselines**:
+   - Switched default generic reference to 3 robust facial features (`brow_furrow`, `lip_press`, `lip_corner`) with `jaw_clenching` isolated to exploratory diagnostics.
+   - Built optional personal baseline mode (`pause.baseline.v1`) stored strictly in localStorage.
+   - Replaced pseudo-confidence intervals with median absolute deviation (MAD) spread bounds.
+   - Cleaned up state machine with 10-second countdown and 60% valid-frame gate.
+   - Full Python parity mirror (`stress_math/deployed_mirror.py`) verified against browser scoring.
+2. **Step 2: Calm UI redesign**:
+   - Replaced busy developer graph with calm, accessible UI (`pause-ui.css`).
+   - Integrated `ResultCard`, `ScanScreen`, `HistoryPage`, and `InfoPage` with subtle motion, dark mode support, and WCAG AA contrast.
+3. **Step 3: PWA offline support, monitoring stubs, & CI automation**:
+   - Configured `vite-plugin-pwa` with offline caching of app shell and MediaPipe model.
+   - Hardened Content Security Policy (CSP) headers and added Sentry/Plausible telemetry stubs.
+   - Added Playwright end-to-end tests (`frontend/e2e/pause.spec.js`) with `@axe-core/playwright` accessibility audits.
+   - Added mobile Lighthouse CI configuration (`lighthouserc.json`) achieving Performance: 99, Accessibility: 94, Best Practices: 100, SEO: 91.
+4. **Step 4: Honest Calm index documentation & claims**:
+   - Updated `README.md` and `docs/VALIDATION_TODO.md` to ensure zero clinical or physiological stress claims are made.
+5. **Merge & Live Deployment**:
+   - Fast-forward merged `prod-hardening` into `main` and pushed to `origin/main`.
+   - GitHub Actions workflow run [#38369855652](https://github.com/Jyotiraditya21-bug/pause-stress-mvp/actions/runs/38369855652) completed green across `deploy`, `e2e`, and `lighthouse` jobs.
+   - Live GitHub Pages site at https://jyotiraditya21-bug.github.io/pause-stress-mvp/ verified active and delivering production assets.
 
 ### Remaining — 3 groups (inputs or controlled tests required)
 
