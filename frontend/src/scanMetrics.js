@@ -26,17 +26,21 @@ export function summarize(samples, total, duration) {
 
 // Scan-specific checks keep the existing assessFrame API available to old callers.
 export function assessQuickFrame(points,faceCount,brightness,previous) {
-  if(!Number.isFinite(brightness))return {good:false,reason:'Position your face inside the circle.'};
+  const flags={lowLight:false,offCenter:false,tooFar:false,tooClose:false,moving:false,multipleFaces:faceCount>1,mouthOpen:false,pose:false};
+  if(!Number.isFinite(brightness))return {good:false,reason:faceCount>1?'One face only':'Fit your face in the circle',qualityFlags:flags};
   const q=assessFrame(points,faceCount,brightness,previous);
-  if(!q.good)return q;
+  if(faceCount>1)return {...q,reason:'One face only',qualityFlags:flags};
+  if(!q.center)return {...q,reason:'Fit your face in the circle',qualityFlags:flags};
   const width=Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x));
   const height=Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y));
   let reason='';
-  if(width<.15||height<.20)reason='Move closer so your face fills the circle.';
-  else if(width>.85||height>.95)reason='Move a little farther from the camera.';
-  else if(Math.abs(q.center.x-.5)>.24||Math.abs(q.center.y-.5)>.24)reason='Centre your face inside the circle.';
-  else if(q.movement>.05)reason='Hold still for a repeatable scan.';
-  return {...q,good:!reason,reason:reason||q.reason};
+  if(brightness<18){flags.lowLight=true;reason='Find more light';}
+  else if(width<.15||height<.20){flags.tooFar=true;reason='Move closer';}
+  else if(width>.85||height>.95){flags.tooClose=true;reason='Move back';}
+  else if(Math.abs(q.center.x-.5)>.24||Math.abs(q.center.y-.5)>.24){flags.offCenter=true;reason='Center your face';}
+  else if(q.movement>.05){flags.moving=true;reason='Hold still';}
+  else if(!q.good)reason=q.reason;
+  return {...q,good:!reason,reason:reason||'Good position. Hold still.',qualityFlags:flags};
 }
 
 export function faceBrightness(pixels,width,height,points) {

@@ -10,8 +10,11 @@ import numpy as np
 
 FRONTEND = Path(__file__).resolve().parents[1] / 'frontend/src'
 CANONICAL = json.loads((FRONTEND / 'faceReference.json').read_text())
-KEYS = ('brow_furrow', 'lip_press', 'lip_corner', 'jaw_clench')
-SPREADS = dict(zip(KEYS, (.06, .04, .06, .08)))
+GENERIC_KEYS = ('brow_furrow', 'lip_press', 'lip_corner')
+BASELINE_KEYS = (*GENERIC_KEYS, 'jaw_clench')
+KEYS = GENERIC_KEYS
+SPREADS = dict(zip(BASELINE_KEYS, (.06, .04, .06, .08)))
+ALGO_VERSION = 'quick-2.0'
 SCAN_RULES = dict(duration=10, settling=1, slotSeconds=.2, minCoverage=.8,
                   minWindows=8, maxScoreSpread=1, maxHalfDifference=.75,
                   maxPoseSpan=6, maxBrightnessSpan=30)
@@ -117,15 +120,15 @@ def face_brightness(pixels,width,height,points):
     return float(patch.mean()) if patch.size else float('nan')
 
 
-def reference_rows():
+def reference_rows(keys=GENERIC_KEYS):
     g=geometry(reference_points())
-    return [{k:g[k]+f*SPREADS[k] for k in KEYS} for f in (0,1,-1,.5,-.5)]
+    return [{k:g[k]+f*SPREADS[k] for k in keys} for f in (0,1,-1,.5,-.5)]
 
 
-def score_row(row,baseline):
+def score_row(row,baseline,keys=GENERIC_KEYS):
     """Fresh FixedIndex per window, exactly as QuickIndex's callback."""
     z=[]
-    for k in KEYS:
+    for k in keys:
         a=[r[k] for r in baseline if finite(r.get(k))]
         if len(a)>=5 and finite(row.get(k)):
             mu=float(np.mean(a)); sigma=max(float(np.std(a)),.05*abs(mu)+.001)
@@ -136,8 +139,8 @@ def score_row(row,baseline):
 
 
 class ScanReliability:
-    def __init__(self,keys=KEYS,score=None):
-        self.keys=keys; self.score=score or (lambda r:score_row(r,reference_rows()))
+    def __init__(self,keys=GENERIC_KEYS,score=None,feature_keys=None):
+        self.keys=keys; self.feature_keys=feature_keys or keys; self.score=score or (lambda r:score_row(r,reference_rows()))
         self.slots={}; self.last_time=-math.inf; self.feature_rows=[]
 
     def add(self,time,row,context=None):
@@ -154,7 +157,7 @@ class ScanReliability:
         for i,samples in self.slots.items():
             valid=[s for s in samples if s is not None]
             if not valid: continue
-            row={k:median([s[0][k] for s in valid]) for k in self.keys}
+            row={k:median([s[0][k] for s in valid if finite(s[0].get(k))]) for k in self.feature_keys}
             context={}
             for k in ('pitch','yaw','brightness'):
                 a=[s[1][k] for s in valid if finite(s[1].get(k))]
@@ -168,7 +171,7 @@ class ScanReliability:
             block=[slots[i] for i in range(window*5,(window+1)*5) if i in slots]
             value=None
             if len(block)>=2:
-                row={k:median([b[0][k] for b in block]) for k in self.keys}
+                row={k:median([b[0][k] for b in block if finite(b[0].get(k))]) for k in self.feature_keys}
                 value=self.score(dict(row,time=window+1.5)); rows.append(row)
             contexts.extend(b[1] for b in block)
             points.append(dict(time=window+1.5,value=value))
@@ -200,19 +203,42 @@ class ScanReliability:
                 if a and span(a)>(30 if k=='brightness' else 6):
                     warnings.append('Lighting varied during the scan.' if k=='brightness' else 'Head position varied during the scan.')
             if warnings:warning=' '.join(warnings)+' Treat this estimate with lower confidence.'
-        return dict(quality='poor' if fatal else 'limited' if warning else 'good',reason=fatal or warning,
-            average=None if fatal else median([p['value'] for p in consistent]),latest=None if fatal else points[-1]['value'],
+        final=None if fatal else median([p['value'] for p in consistent])
+        uncertainty=None if final is None else 1.4826*median([abs(v-median(values)) for v in values])
+        warnings=[] if not warning else ['Keep your face in the circle with even lighting.']
+        feature_stats={k:dict(median=median([r[k] for r in rows]),mad=median([abs(v-median([r[k] for r in rows])) for v in [r[k] for r in rows]])) for k in self.feature_keys} if rows else None
+        return dict(quality='poor' if fatal else 'limited' if warning else 'good',status='failed' if fatal else 'limited' if warning else 'ok',reason=fatal or warning,failReason=fatal,warnings=warnings,
+            average=final,latest=None if fatal else points[-1]['value'],
             points=points,coveragePercent=100*coverage,
-            features={k:median([r[k] for r in rows]) for k in self.keys} if rows else None,
+            features={k:median([r[k] for r in rows]) for k in self.feature_keys} if rows else None,featureStats=feature_stats,
+            windowScores=[p['value'] if finite(p['value']) else None for p in points],range=None if final is None else [max(0,final-uncertainty),min(10,final+uncertainty)],
+            qualityFlags=dict(lowLight=False,offCenter=False,tooFar=False,tooClose=False,moving=False,multipleFaces=False,mouthOpen=False,pose=False),
             reliability=dict(usableSlots=len(slots),totalSlots=45,usableWindows=len(values),totalWindows=9,
-                scoreSpread=spread,halfDifference=half,consistentWindows=len(consistent),consensusHalfDifference=difference,ruleVersion='window-quality-v2'))
+                scoreSpread=spread,uncertaintySpread=uncertainty,halfDifference=half,consistentWindows=len(consistent),consensusHalfDifference=difference,ruleVersion='window-quality-v3'))
 
 
 class QuickIndex:
-    def __init__(self,baseline=None):
-        self.reference=reference_rows() if baseline is None else baseline
-        self.measurements=ScanReliability(KEYS,lambda row:score_row(row,self.reference))
+    def __init__(self,baseline=None,mode=None):
+        self.mode=mode or ('baseline' if baseline is not None else 'generic')
+        self.keys=BASELINE_KEYS if self.mode=='baseline' else GENERIC_KEYS
+        self.reference=reference_rows(self.keys) if baseline is None else baseline
+        self.measurements=ScanReliability(self.keys,self.score,BASELINE_KEYS)
         self.rejections={}
+
+    def score(self,row):
+        if self.mode!='baseline':return score_row(row,self.reference,self.keys)
+        if isinstance(self.reference,list):
+            stats={k:dict(median=median([r[k] for r in self.reference]),mad=median([abs(v-median([r[k] for r in self.reference])) for v in [r[k] for r in self.reference]])) for k in self.keys}
+        else:stats=self.reference.get('features',self.reference)
+        z=[]
+        for k in self.keys:
+            s=stats.get(k);value=row.get(k)
+            if not s or not finite(value):continue
+            sigma=max(1.4826*s['mad'],.05*abs(s['median'])+.001)
+            z.append(max(-3,min(3,(value-s['median'])/(sigma+1e-6))))
+        if not z:return None
+        raw=sum(z)/math.sqrt(len(z))
+        return 10*(1-1/(1+math.exp(-raw)))
 
     def update(self,time,points,pose,quality_good,context=None):
         context=context or {}; row=None; reason=''
@@ -231,6 +257,7 @@ class QuickIndex:
 
     def finish(self):
         result=self.measurements.finish()
+        result['mode']=self.mode;result['algoVersion']=ALGO_VERSION
         result['reliability']['rejectionReasons']=dict(self.rejections)
         if result['average'] is None and result['reason'].startswith('Not enough clear') and self.rejections:
             result['reason']=max(self.rejections,key=self.rejections.get)+' Then retry the 10-second scan.'

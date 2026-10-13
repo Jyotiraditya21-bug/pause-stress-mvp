@@ -9,14 +9,16 @@ export function quantile(values,q) {
 }
 export const median=values=>quantile(values,.5);
 const span=a=>quantile(a,.9)-quantile(a,.1);
+export const mad=values=>values.length?median(values.map(v=>Math.abs(v-median(values)))):null;
 
 export class ScanReliability {
-  constructor(keys,score){this.keys=keys;this.score=score;this.slots=new Map();this.lastTime=-Infinity;}
+  constructor(keys,score,featureKeys=keys){this.keys=keys;this.featureKeys=featureKeys;this.score=score;this.slots=new Map();this.lastTime=-Infinity;this.qualityFlags={lowLight:false,offCenter:false,tooFar:false,tooClose:false,moving:false,multipleFaces:false,mouthOpen:false,pose:false};}
   add(time,row,context={}) {
     if(!Number.isFinite(time)||time<=this.lastTime||time<0||time>=SCAN_RULES.duration)return false;
     this.lastTime=time;
     if(time<SCAN_RULES.settling)return false;
     const slot=Math.min(44,Math.floor((time-SCAN_RULES.settling)/SCAN_RULES.slotSeconds+1e-8));
+    for(const key of Object.keys(this.qualityFlags))this.qualityFlags[key] ||= !!context.qualityFlags?.[key];
     const samples=this.slots.get(slot)||[];
     // Store invalid observations too: a brief good frame cannot bless a bad slot.
     samples.push(row&&this.keys.every(k=>Number.isFinite(row[k]))?{row,context}:null);
@@ -28,7 +30,7 @@ export class ScanReliability {
     for(const [i,samples] of this.slots){
       const valid=samples.filter(Boolean);
       if(!valid.length)continue;
-      const row=Object.fromEntries(this.keys.map(k=>[k,median(valid.map(s=>s.row[k]))]));
+      const row=Object.fromEntries(this.featureKeys.map(k=>[k,median(valid.map(s=>s.row[k]).filter(Number.isFinite))]));
       const context={};
       for(const k of ['pitch','yaw','brightness']){
         const values=valid.map(s=>s.context[k]).filter(Number.isFinite);
@@ -45,7 +47,7 @@ export class ScanReliability {
       for(let i=window*5;i<(window+1)*5;i++)if(slots.has(i))block.push(slots.get(i));
       let value=null;
       if(block.length>=2){
-        const row=Object.fromEntries(this.keys.map(k=>[k,median(block.map(s=>s.row[k]))]));
+        const row=Object.fromEntries(this.featureKeys.map(k=>[k,median(block.map(s=>s.row[k]).filter(Number.isFinite))]));
         value=this.score({...row,time:window+1.5});
         featureRows.push(row);
       }
@@ -83,10 +85,16 @@ export class ScanReliability {
       if(warnings.length)warningReason=warnings.join(' ')+' Treat this estimate with lower confidence.';
     }
     const reason=fatalReason||warningReason;
-    const features=featureRows.length?Object.fromEntries(this.keys.map(k=>[k,median(featureRows.map(r=>r[k]))])):null;
-    return {quality:fatalReason?'poor':warningReason?'limited':'good',reason,average:fatalReason?null:median(consistent.map(p=>p.value)),
+    const warnings=warningReason?warningReason.replace(' Treat this estimate with lower confidence.','').split('. ').map(v=>v.replace(/\.$/,'')).filter(Boolean).map(v=>v==='Some camera frames were unclear'?'Keep your face in the circle with even lighting.':v==='Brief unusual readings were filtered out'?'Hold still and keep a neutral expression.':v==='Lighting varied during the scan'?'Use steady light facing you.':'Keep your head facing the camera.'):[];
+    const features=featureRows.length?Object.fromEntries(this.featureKeys.map(k=>[k,median(featureRows.map(r=>r[k]).filter(Number.isFinite))])):null;
+    const featureStats=featureRows.length?Object.fromEntries(this.featureKeys.map(k=>{const a=featureRows.map(r=>r[k]).filter(Number.isFinite);return[k,{median:median(a),mad:mad(a)}];})):null;
+    const finalScore=fatalReason?null:median(consistent.map(p=>p.value));
+    const uncertainty=finalScore===null?null:1.4826*mad(values);
+    const status=fatalReason?'failed':warningReason?'limited':'ok';
+    return {quality:fatalReason?'poor':warningReason?'limited':'good',status,reason,failReason:fatalReason||'',warnings,average:finalScore,
       latest:fatalReason?null:points.at(-1)?.value??null,points,coveragePercent:100*coverage,features,
+      featureStats,windowScores:points.map(p=>Number.isFinite(p.value)?p.value:null),range:finalScore===null?null:[Math.max(0,finalScore-uncertainty),Math.min(10,finalScore+uncertainty)],qualityFlags:{...this.qualityFlags},
       reliability:{usableSlots:slots.size,totalSlots:45,usableWindows:values.length,totalWindows:9,
-        scoreSpread:spread,halfDifference,consistentWindows:consistent.length,consensusHalfDifference:consensusDifference,ruleVersion:'window-quality-v2'}};
+        scoreSpread:spread,uncertaintySpread:uncertainty,halfDifference,consistentWindows:consistent.length,consensusHalfDifference:consensusDifference,ruleVersion:'window-quality-v3'}};
   }
 }

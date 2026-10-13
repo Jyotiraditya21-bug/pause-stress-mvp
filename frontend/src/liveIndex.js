@@ -1,5 +1,6 @@
 import {ScanReliability} from './scanReliability.js';
 import canonical from './faceReference.json' with {type:'json'};
+import {ALGO_VERSION} from './baselineStorage.js';
 
 export const FEATURES = ['blink_rate','brow_furrow','lip_press','lip_corner','jaw_clench','jitter'];
 export const BASELINE_SECONDS = 25;
@@ -110,21 +111,33 @@ export class LiveIndex {
 
 // Fixed engineering reference; no personal calibration or fitting on task labels.
 export const SCAN_SECONDS=10;
+export const GENERIC_KEYS=Object.freeze(['brow_furrow','lip_press','lip_corner']);
+export const BASELINE_KEYS=Object.freeze([...GENERIC_KEYS,'jaw_clench']);
 export class QuickIndex {
-  constructor() {
+  constructor({baseline=null,mode=baseline?'baseline':'generic'}={}) {
     const p=Array.from({length:478},()=>[0,0]);
     canonical.indices.forEach((i,n)=>{p[i]=[...canonical.reference[n]];});
-    const g=geometry(p),row=Object.fromEntries(['brow_furrow','lip_press','lip_corner','jaw_clench'].map(k=>[k,g[k]]));
+    const g=geometry(p),row=Object.fromEntries(BASELINE_KEYS.map(k=>[k,g[k]]));
     const stds={brow_furrow:.06,lip_press:.04,lip_corner:.06,jaw_clench:.08};
-    this.reference=[
-      {...row},
-      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]+stds[k]])),
-      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]-stds[k]])),
-      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]+stds[k]*.5])),
-      Object.fromEntries(Object.keys(row).map(k=>[k,row[k]-stds[k]*.5]))
-    ];
-    this.measurements=new ScanReliability(Object.keys(row),r=>new FixedIndex(this.reference).score(r));
+    this.mode=mode;
+    this.keys=mode==='baseline'?BASELINE_KEYS:GENERIC_KEYS;
+    this.reference=baseline ? null : [0,1,-1,.5,-.5].map(f=>Object.fromEntries(this.keys.map(k=>[k,row[k]+f*stds[k]])));
+    this.baseline=baseline;
+    this.measurements=new ScanReliability(this.keys,r=>this.score(r),BASELINE_KEYS);
     this.rejections={};
+  }
+  score(row) {
+    if(this.mode!=='baseline') return new FixedIndex(this.reference).score(row);
+    const z=[];
+    for(const key of this.keys){
+      const stat=this.baseline?.features?.[key];
+      if(!stat||!Number.isFinite(row[key]))continue;
+      const sigma=Math.max(1.4826*stat.mad,.05*Math.abs(stat.median)+.001);
+      z.push(Math.max(-3,Math.min(3,(row[key]-stat.median)/(sigma+1e-6))));
+    }
+    if(!z.length)return null;
+    const r=z.reduce((a,b)=>a+b,0)/Math.sqrt(z.length);
+    return 10*(1-1/(1+Math.exp(-r)));
   }
   update(time,points,pose,qualityGood,context={}) {
     let row=null,reason='';
@@ -145,6 +158,8 @@ export class QuickIndex {
   }
   finish(){
     const result=this.measurements.finish();
+    result.mode=this.mode;
+    result.algoVersion=ALGO_VERSION;
     result.reliability.rejectionReasons={...this.rejections};
     if(result.average===null&&result.reason.startsWith('Not enough clear')){
       const top=Object.entries(this.rejections).sort((a,b)=>b[1]-a[1])[0];

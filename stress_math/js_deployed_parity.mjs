@@ -6,7 +6,7 @@ const output=input.map(f=>{
   const points=f.points.map(([x,y])=>({x,y}));
   const brightness=faceBrightness(f.pixels,f.width,f.height,points);
   const quality=assessQuickFrame(points,f.faceCount,brightness,f.previous);
-  const scan=new QuickIndex();
+  const scan=new QuickIndex({baseline:f.baseline||null,mode:f.mode});
   for(const row of f.scan) scan.update(row.time,row.points.map(([x,y])=>[x*f.width,y*f.height]),row.pose,row.good,{brightness:row.brightness});
   return {brightness,quality,pose:headPose(f.poseMatrix),geometry:geometry(f.scan[1].points.map(([x,y])=>[x*f.width,y*f.height])),result:scan.finish()};
 });

@@ -90,7 +90,7 @@ def sample_records(records):
 
 def score_clip(records,rest_rows):
  d0=scan(records);d1=scan(records,rest_rows) if len(rest_rows)>=5 else None;rows=d0['_feature_rows']
- d2=float(np.mean([np.var([r[k] for r in rows]) for k in mirror.KEYS])) if len(rows)>=2 else None
+ d2=float(np.mean([np.var([r[k] for r in rows]) for k in mirror.BASELINE_KEYS])) if len(rows)>=2 else None
  return dict(indices={'D0':d0['average'],'D1':None if d1 is None else d1['average'],'D2':d2},accepted=d0['average'] is not None,quality=d0['quality'],coverage_percent=d0['coveragePercent'],ms_frame=d0['processed_ms_per_frame'])
 
 def clips_for_session(session,cache):
@@ -124,7 +124,7 @@ def evaluate(sessions,output_dir):
    rest=baseline_rows(cache[rk])
   for start,task,label,rows in clips_for_session(s,cache):
    scored=score_clip(rows,rest);clip_id=f"{Path(s['video_path']).stem}@{start:g}"
-   raw_features={k:float(np.mean([r[k] for r in rest])) for k in mirror.KEYS} if rest else None
+   raw_features={k:float(np.mean([r[k] for r in rest])) for k in mirror.BASELINE_KEYS} if rest else None
    indices=dict(scored['indices'])
    # The first 25 s define D1's baseline and cannot also be its evaluation data.
    if task=='T1' and start<25:indices['D1']=None
@@ -151,7 +151,7 @@ def evaluate(sessions,output_dir):
  out=Path(output_dir);out.mkdir(parents=True,exist_ok=True);(out/'metrics.json').write_text(json.dumps(clean(result),indent=2));write_report(result,out);return result
 
 def write_report(result,out):
- lines=['# Deployed 10-second algorithm evaluation','','Non-overlapping 10-second clips are classified using T1 rest=0 and T2 speech/T3 arithmetic=1. These are task-based labels, not clinically measured stress. D0 is the deployed generic-reference formula. Offline personalized methods do not validate D0. Nothing is fitted on test data.','D0 uses the four deployed geometry features and fixed canonical reference. D1 uses those features with the first 25 seconds of subject rest as baseline; baseline-overlapping T1 clips are missing for D1. D2 is the mean variance of the four features across one-second windows.','D0/D1 scores are inverted for ROC AUC so larger values indicate the task label. Invalid scans are excluded; unavailable method scores remain missing.','Pose gates use the same numeric limits, with OpenCV solvePnP estimates in this Python evaluator; the browser obtains pose from MediaPipe transformation matrices. Results near pose cutoffs may therefore differ.','']
+ lines=['# Deployed 10-second algorithm evaluation','','Non-overlapping 10-second clips are classified using T1 rest=0 and T2 speech/T3 arithmetic=1. These are task-based labels, not clinically measured stress. D0 is the deployed generic-reference formula. Offline personalized methods do not validate D0. Nothing is fitted on test data.','D0 uses the three deployed generic geometry features (brow furrow, lip press and lip corner) with the fixed canonical reference. D1 uses those three plus jaw geometry with the first 25 seconds of subject rest as baseline; baseline-overlapping T1 clips are missing for D1. D2 is the mean variance of the four features across one-second windows.','D0/D1 scores are inverted for ROC AUC so larger values indicate the task label. Invalid scans are excluded; unavailable method scores remain missing.','Pose gates use the same numeric limits, with OpenCV solvePnP estimates in this Python evaluator; the browser obtains pose from MediaPipe transformation matrices. Results near pose cutoffs may therefore differ.','']
  for split,entry in result['task_splits'].items():
   lines += [f"## {split}",'', '| Method | AUC [95% CI] | d_z [95% CI] | Wilcoxon p [95% CI] | Permutation null AUC [95%], p | accepted / total | mean coverage |','|---|---:|---:|---:|---:|---:|---:|']
   for m,v in entry['methods'].items():
