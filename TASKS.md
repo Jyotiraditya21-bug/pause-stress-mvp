@@ -328,3 +328,10 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Add contribution/security guidance, bug/feature issue forms and a pull-request template. Add read-only branch/PR CI for frontend tests/build and Python/parity tests.
 - [x] Extend ignore rules for local environment variants, keys, logs and Python tooling artifacts while preserving `.env.example` templates.
 - [x] Verify 22 current local documentation/image links and whitespace checks; tracked-path audit found no environment secrets, recordings, databases, caches or dependency/build directories.
+
+## Live release — 2026-10-15
+
+- [x] Confirm no open GitHub issues; resolve PR #1 conflicts with the earlier main-branch UI revert, preserving the latest light interface and research code.
+- [x] Require browser and offline checks before the Pages deployment job; update README for main-based releases.
+- [x] Recheck 37 frontend unit tests and production build successfully after restoring supporting UI pages.
+- [ ] Verify merged main Pages deployment and live assets.

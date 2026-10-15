@@ -12,7 +12,7 @@ A browser-based facial check-in with a light interface, a short camera scan, and
 
 ## Branch status
 
-The screenshot and features here describe `prod-hardening`. The live site follows `main` and may differ. Pushing this branch does not deploy it or enable the provisional tolerant acquisition policy.
+The live site deploys from `main` after browser and offline checks pass. The provisional tolerant acquisition policy remains opt-in; deployment does not enable it by default.
 
 ## The experience
 
@@ -31,7 +31,6 @@ Use **Node.js 22** and npm. Camera access requires localhost or HTTPS.
 ```sh
 git clone https://github.com/Jyotiraditya21-bug/pause-stress-mvp.git
 cd pause-stress-mvp
-git switch prod-hardening
 cd frontend
 npm ci
 npm run dev
