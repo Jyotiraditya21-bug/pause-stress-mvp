@@ -310,3 +310,13 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Verification: 37 frontend tests passed; production PWA build passed. Python full discovery ran 41 tests: 40 passed, one optional Torch/Transformers smoke test skipped; affected tolerance tests were rerun after final edits. Browser suite: 12 passed, one separately configured offline test skipped; includes both tolerant cap/NONE and cancel cleanup checks.
 - [x] Actual bundled MediaPipe Tasks model decoded a temporary blank video outside the sandbox. Full evaluator smoke on a 20-second blank recording returned NONE/no score for OLD, NEW and NEW_3D and FAIL adoption, with no extraction failures. Sandbox-only execution cannot create NSOpenGL; no real participant video was used.
 - [ ] Authorized still/natural_movement/talking/smiling/glasses/low_light repeated recordings and UBFC-Phys data are absent. No empirical acceptance, AUC improvement or repeatability claim is made. `adopted=false` and `frontalize3d=false` remain in the shared configuration.
+
+## Light, friendly UI redesign — 2026-10-15
+
+- [x] Replace automatic dark tones with a consistent warm off-white, sage, peach and lavender theme; align mobile browser/PWA colors.
+- [x] Add a desktop two-column scan layout, clear preparation steps, friendly SVG preview, compact icon navigation and privacy reassurance.
+- [x] Add gentle entrance, breathing and scan animations with reduced-motion support. Keep text fully opaque throughout transitions for accessible contrast.
+- [x] Update Results presentation and consolidate actions around Save this result, Scan again and optional calibration. Preserve every score, acquisition rule and camera lifecycle behavior.
+- [x] Refine narrow/short mobile layouts; visually confirm the start button fits at 360×640 and light colors remain active under a dark system preference.
+- [x] Verification: 37 frontend unit tests passed, production PWA build passed, and all 10 main Playwright checks passed, including Scan/Result/History axe checks and four viewport overflow checks. Desktop, phone and Results screenshots inspected. No scoring or Python research changes; no new dependencies.
+- [x] Local development server remains available at `http://127.0.0.1:5173/?tolerance=1`. This UI revision has not been deployed to GitHub Pages.

@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import './pause-ui.css';
 import ScanScreen from './components/ScanScreen.jsx';
 import ResultCard from './components/ResultCard.jsx';
+import Icon from './components/Icon.jsx';
 import {readCameraSessions,saveCameraSession,deleteCameraSession} from './cameraSessions.js';
 import {readBaseline,resetBaseline,saveBaseline} from './baselineStorage.js';
 import {initializeMonitoring} from './monitoring.js';
@@ -19,15 +20,21 @@ function setOnboarded(){try{localStorage.setItem(ONBOARDING_KEY,'1')}catch{}}
 
 function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline}){
   const flags=Object.entries(result.qualityFlags||{}).filter(([,value])=>value).map(([key])=>key);
-  return <section className="result-screen"><h1>Calm index result</h1><ResultCard status={result.status||result.quality} score={result.average} windows={result.windowScores||result.points?.map(p=>p.value)||[]} reason={result.failReason||result.reason} warnings={result.warnings||[]} onRetry={onRetry} onDone={onDone}/>
-    {result.status!=='failed'&&Number.isFinite(result.average)&&<div className="result-tools">
+  const usable=result.status!=='failed'&&Number.isFinite(result.average);
+  const caption=usable&&<div className="result-caption">
       <p className="mode-line">{result.mode==='baseline'?'Compared with your calm baseline':result.mode==='calibration'?'Calm baseline saved':'Compared with an average face reference'}</p>
       {result.range&&<p className="range-line">Likely scan range: {result.range[0].toFixed(1)}–{result.range[1].toFixed(1)}</p>}
+    </div>;
+  const actions=usable&&<>
       <button className="pz-btn pz-btn-primary" onClick={onSave} disabled={isSaved}>{isSaved?'Result saved':'Save this result'}</button>
-      <button className="pz-btn pz-btn-quiet" onClick={onCalibrate}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>
+      <button className="pz-btn pz-btn-quiet" onClick={onRetry}>Scan again</button>
+      <button className="calibrate-link" onClick={onCalibrate}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>
+    </>;
+  return <section className="result-screen"><h1>Calm index result</h1><ResultCard status={result.status||result.quality} score={result.average} windows={result.windowScores||result.points?.map(p=>p.value)||[]} reason={result.failReason||result.reason} warnings={result.warnings||[]} onRetry={onRetry} onDone={onDone} caption={caption} actions={actions}>
+    {usable&&
       <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd><dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd>{result.tier&&<><dt>Tier</dt><dd>{result.tier}</dd><dt>Confidence</dt><dd>{result.confidence.toFixed(2)}</dd><dt>Features per window</dt><dd>{result.windowFeaturesUsed.join(', ')}</dd></>}</dl></details>
-    </div>}
-  </section>;
+    }
+  </ResultCard></section>;
 }
 
 function App(){
@@ -60,7 +67,7 @@ function App(){
   function clearBaseline(){if(resetBaseline()){setBaselineState(null);setNotice('Your calm baseline was reset.')}else setError('The baseline could not be reset. Check browser storage settings, then try again.')}
   const saved=!!result&&sessions.some(row=>row.id===result.id);
   return <div className="app-shell">
-    <header className="site-header"><button className="brand" onClick={()=>navigate('Scan')}>Pause</button><nav className="main-nav" aria-label="Primary"><button aria-current={screen==='Scan'?'page':undefined} onClick={()=>navigate('Scan')}>Scan</button><button aria-current={screen==='History'?'page':undefined} onClick={()=>navigate('History')}>History</button>{lab&&<button aria-current={screen==='Lab'?'page':undefined} onClick={()=>navigate('Lab')}>Lab</button>}</nav></header>
+    <header className="site-header"><button className="brand" onClick={()=>navigate('Scan')} aria-label="Pause home"><span className="brand-mark" aria-hidden="true"><i/><i/></span>pause</button><nav className="main-nav" aria-label="Primary"><button aria-current={screen==='Scan'?'page':undefined} onClick={()=>navigate('Scan')}><Icon name="scan" size={17}/>Scan</button><button aria-current={screen==='History'?'page':undefined} onClick={()=>navigate('History')}><Icon name="history" size={17}/>History</button>{lab&&<button aria-current={screen==='Lab'?'page':undefined} onClick={()=>navigate('Lab')}>Lab</button>}</nav></header>
     {notice&&<p className="notice" role="status">{notice}</p>}{error&&<p className="error-banner" role="alert">{error}</p>}
     <div className="app-content"><Suspense fallback={<main className="page"><p>Loading…</p></main>}>
       {screen==='Onboarding'&&<main className="page onboarding"><h1>A quiet moment to check in</h1><p>Pause gives you an experimental Calm index after a 10-second camera scan. Processing stays on your device, and the result cannot tell how stressed you feel.</p><button className="pz-btn pz-btn-primary" onClick={()=>{setOnboarded();navigate('Scan')}}>Continue to scan</button></main>}
@@ -70,7 +77,7 @@ function App(){
       {screen==='Settings'&&<main className="page settings"><h1>Settings</h1><section className="pz-panel"><h2>Personal baseline</h2><p>Calibrate when calm so future scores compare you with your own calm face.</p><button className="pz-btn pz-btn-primary" onClick={startCalibration}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>{baseline&&<button className="pz-btn pz-btn-quiet" onClick={clearBaseline}>Reset baseline</button>}</section></main>}
       {screen==='Privacy'&&<PrivacyPage/>}{screen==='About'&&<AboutPage/>}{screen==='Lab'&&lab&&<main className="page lab-page"><h1>Lab</h1><Experiment/></main>}
     </Suspense></div>
-    <footer className="site-footer"><button onClick={()=>navigate('Privacy')}>Privacy</button><button onClick={()=>navigate('About')}>About this index</button><button onClick={()=>navigate('Settings')}>Settings</button></footer>
+    <footer className="site-footer"><span className="footer-note"><Icon name="shield" size={14}/>A private moment. A little more awareness.</span><div className="footer-links"><button onClick={()=>navigate('Privacy')}>Privacy</button><button onClick={()=>navigate('About')}>About this index</button><button onClick={()=>navigate('Settings')}>Settings</button></div></footer>
   </div>;
 }
 

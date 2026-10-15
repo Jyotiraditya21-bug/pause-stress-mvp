@@ -22,8 +22,8 @@ function Gauge({ score, tone }) {
   return (
     <div className={`pz-gauge pz-tone-${tone}`} role="img" aria-label={`Calm index ${score.toFixed(1)} out of 10`}>
       <svg viewBox="0 0 200 112" aria-hidden="true">
-        <path className="pz-gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" strokeWidth="14" strokeLinecap="round" />
-        <path className="pz-gauge-fill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" strokeWidth="14" strokeLinecap="round" strokeDasharray={ARC_LENGTH} strokeDashoffset={offset} />
+        <path className="pz-gauge-track" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" strokeWidth="8" strokeLinecap="round" />
+        <path className="pz-gauge-fill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" strokeWidth="8" strokeLinecap="round" strokeDasharray={ARC_LENGTH} strokeDashoffset={offset} />
       </svg>
       <div className="pz-gauge-readout"><div className="pz-score">{score.toFixed(1)}<small> /10</small></div></div>
     </div>
@@ -44,7 +44,7 @@ function Trend({ windows }) {
   </svg>;
 }
 
-export default function ResultCard({ status, score, windows = [], reason, warnings = [], onRetry, onDone }) {
+export default function ResultCard({ status, score, windows = [], reason, warnings = [], onRetry, onDone, caption, actions, children }) {
   if (status === "failed" || score == null) return <main className="pz-result">
     <section className="pz-fail" aria-live="polite"><h2>We couldn't get a reading</h2><p>{reason || "The camera didn't see your face clearly enough for long enough."}</p><p>Face a light source, keep your whole face in the circle, and stay still for 10 seconds.</p></section>
     <div className="pz-actions"><button className="pz-btn pz-btn-primary" onClick={onRetry}>Scan again</button></div>
@@ -55,10 +55,12 @@ export default function ResultCard({ status, score, windows = [], reason, warnin
     <Gauge score={score} tone={band.tone} />
     <div className={`pz-tone-${band.tone}`} style={{ textAlign: "center" }}><div className="pz-band">{band.label}</div></div>
     <p className="pz-meaning">{band.note}</p>
+    {caption}
     <div className={`pz-chip ${limited ? "is-limited" : ""}`}><i aria-hidden="true" />{limited ? "Limited confidence" : "Good signal"} · {usable} of {windows.length || 9} seconds usable</div>
     <section className="pz-panel"><h3>During your scan</h3><p>Each point is one second. The dashed line is the reference midpoint.</p><Trend windows={windows} /></section>
     {limited && warnings.length > 0 && <section className="pz-panel" aria-live="polite"><h3>For a steadier reading</h3><ul className="pz-tips">{warnings.map((w) => <li key={w}>{w}</li>)}</ul></section>}
-    <div className="pz-actions"><button className="pz-btn pz-btn-primary" onClick={onRetry}>Scan again</button>{onDone && <button className="pz-btn pz-btn-quiet" onClick={onDone}>Done</button>}</div>
+    <div className="pz-actions">{actions||<><button className="pz-btn pz-btn-primary" onClick={onRetry}>Scan again</button>{onDone && <button className="pz-btn pz-btn-quiet" onClick={onDone}>Done</button>}</>}</div>
+    {children}
     <p className="pz-fineprint">An experimental facial index, not a medical measurement or a measure of how stressed you feel. Video stays on your device.</p>
   </main>;
 }
