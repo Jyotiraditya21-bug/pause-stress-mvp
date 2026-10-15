@@ -9,6 +9,7 @@
     "build": "vite build",
     "test": "node --test src/*.test.js",
     "test:e2e": "playwright test",
+    "test:offline": "PW_PREVIEW=1 playwright test e2e/offline.spec.js",
     "test:lighthouse": "lhci autorun --config=lighthouserc.json"
   },
   "dependencies": {

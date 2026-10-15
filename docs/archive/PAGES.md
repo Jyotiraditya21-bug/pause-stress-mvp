@@ -1,5 +1,7 @@
 # GitHub Pages deployment
 
+> Historical snapshot. Use the current [deployment guide](../DEPLOY.md) for setup.
+
 The workflow .github/workflows/pages.yml builds frontend/ and deploys only frontend/dist. It selects browser storage and derives the repository base path automatically. Camera analysis, questionnaire, history, trends, deletion and local suggestions work without FastAPI. Gemini is disabled in this mode; keys must never go in GitHub Pages JavaScript. Sessions stay in the visitor browser profile and are not synchronized; clearing site data erases them.
 
 1. Sign in locally with gh auth login.

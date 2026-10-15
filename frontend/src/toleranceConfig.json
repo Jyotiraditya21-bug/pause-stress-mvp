@@ -1,0 +1,21 @@
+{
+  "version": "tolerance-1.0",
+  "adopted": false,
+  "frontalize3d": false,
+  "features": ["brow_furrow", "lip_press", "lip_corner", "jaw_clench"],
+  "poseFull": 20, "poseSoft": 40, "poseMax": 50, "softWeight": 0.2, "missingPoseWeight": 0.6,
+  "speedFull": 0.15, "speedSoft": 0.6, "speedMax": 1.0,
+  "lightMin": 18, "lightMax": 240, "lightRamp": 10,
+  "widthMin": 0.15, "widthMax": 0.85, "heightMin": 0.20, "heightMax": 0.95, "sizeRamp": 0.05,
+  "minFrameWeight": 0.1, "mouthMax": 0.32, "jawYawMax": 25,
+  "minCutoff": 1.0, "beta": 0.05, "dCutoff": 1.0, "faceLossReset": 0.5,
+  "duration": 10, "maxDuration": 20, "settling": 1, "slotSeconds": 0.2, "coverageSlots": 45, "windowSeconds": 1,
+  "minWindowSlots": 2, "minFeatures": 2, "normalCoverage": 0.6, "normalWindows": 6,
+  "normalRadius": 1.0, "normalFraction": 0.6, "normalDifference": 0.75,
+  "limitedCoverage": 0.15, "limitedWindows": 2, "limitedRadius": 1.5, "limitedFraction": 0.5, "limitedDifference": 1.5,
+  "rangeFloor": 0.4, "madScale": 1.4826, "limitedWiden": 1.5,
+  "confidenceCoverage": 0.5, "confidenceConsensus": 0.3, "confidenceStability": 0.2,
+  "hintCoverage": 0.4, "hintSeconds": 2,
+  "acceptanceTarget": 0.9, "sdIncreaseMax": 0.3, "aucDropMax": 0.02, "frontalShiftReduction": 0.25,
+  "bootstrapDraws": 1000, "seed": 42
+}

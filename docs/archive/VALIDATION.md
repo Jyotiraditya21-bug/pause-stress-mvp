@@ -1,5 +1,7 @@
 # Verification record — 2026-10-11
 
+> Historical snapshot. See the current [task log](../../TASKS.md) and [validation roadmap](../VALIDATION_TODO.md).
+
 Verified:
 - 18 Python math/HF tests passed, including actual AutoImageProcessor with the fixed dummy classifier.
 - Actual third-party model A and model B fp32 dummy-image inference passed on Apple M1 MPS; no training or fine-tuning.

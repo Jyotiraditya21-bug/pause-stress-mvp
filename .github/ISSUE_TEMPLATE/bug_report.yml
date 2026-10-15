@@ -1,0 +1,23 @@
+name: Report a bug
+description: Report a reproducible problem with Pause.
+title: "Bug: "
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Include expected behavior. Do not attach camera recordings, landmarks, credentials or personal results.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device and version or commit
+    validations:
+      required: true

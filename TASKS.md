@@ -1,35 +1,36 @@
 # MVP task tracker
 
-Last updated: 2026-10-13
+Last updated: 2026-10-11
 
-## Current scope and status — 2026-10-13
+## Current scope and status — 2026-10-11
 
-Current MVP: a production-ready, deployed PWA featuring a 10-second on-device camera scan that outputs an experimental Calm index (0-10, higher = calmer) with personal-baseline support, MAD spread bounds, and strict privacy guarantees. Merged into `main` and deployed live to GitHub Pages.
+Current MVP: a deployed live experimental facial index, not an entered stress rating. The scale is reversed (0 high-stress end, 10 no-stress end), with baseline feature means at 5/10. Questionnaire/Gemini sections below document historical work; they are not the current browser flow. Training is outside the current scope. Datasets are test-only.
 
-### Completed — Production hardening & deployment (2026-10-13)
+### Completed — 10 grouped work items
 
-1. **Step 1: Hardened scan logic & personal baselines**:
-   - Switched default generic reference to 3 robust facial features (`brow_furrow`, `lip_press`, `lip_corner`) with `jaw_clenching` isolated to exploratory diagnostics.
-   - Built optional personal baseline mode (`pause.baseline.v1`) stored strictly in localStorage.
-   - Replaced pseudo-confidence intervals with median absolute deviation (MAD) spread bounds.
-   - Cleaned up state machine with 10-second countdown and 60% valid-frame gate.
-   - Full Python parity mirror (`stress_math/deployed_mirror.py`) verified against browser scoring.
-2. **Frontend UI restored**:
-   - Reverted UI to the preferred multi-tab layout (`Overview`, `Live`, `Results`, `History`, `About Model`) with `style.css`.
-   - Restored circular camera viewfinder with circular progress ring SVG, scan sweep, scan grid, and live facial landmark dots on the canvas overlay.
-   - Restored `LiveGraph`, tension score card, and qualitative facial observations on the Results page.
-   - All math, 3-feature scoring algorithms, and MediaPipe logic kept strictly untouched.
-3. **Step 3: PWA offline support, monitoring stubs, & CI automation**:
-   - Configured `vite-plugin-pwa` with offline caching of app shell and MediaPipe model.
-   - Hardened Content Security Policy (CSP) headers and added Sentry/Plausible telemetry stubs.
-   - Added Playwright end-to-end tests (`frontend/e2e/pause.spec.js`) with `@axe-core/playwright` accessibility audits.
-   - Added mobile Lighthouse CI configuration (`lighthouserc.json`) achieving Performance: 99, Accessibility: 94, Best Practices: 100, SEO: 91.
-4. **Step 4: Honest Calm index documentation & claims**:
-   - Updated `README.md` and `docs/VALIDATION_TODO.md` to ensure zero clinical or physiological stress claims are made.
-5. **Merge & Live Deployment**:
-   - Fast-forward merged `prod-hardening` into `main` and pushed to `origin/main`.
-   - GitHub Actions workflow run [#38369855652](https://github.com/Jyotiraditya21-bug/pause-stress-mvp/actions/runs/38369855652) completed green across `deploy`, `e2e`, and `lighthouse` jobs.
-   - Live GitHub Pages site at https://jyotiraditya21-bug.github.io/pause-stress-mvp/ verified active and delivering production assets.
+1. React/Vite frontend, FastAPI/SQLite foundation and project documentation.
+2. Local MediaPipe camera processing, model/WASM assets and consent/lifecycle code.
+3. Fixed mathematical facial features/index with normalization, sigma floor, gates and smoothing.
+4. Browser live graph with 25-second baseline and removal of entered stress-rating results.
+5. Graph review, optional browser saving, history and deletion implementation.
+6. Test-only dataset/manifest loaders and landmark/score caching.
+7. Math baseline comparisons, coverage exclusions, subject-bootstrap CIs and permutation reports.
+8. Optional pretrained A/B loaders: dynamic labels, crops, 5fps, fp32, batch/MPS inference and lazy imports.
+9. M0–M5 fixed fusion/comparison implementation, paired AUC differences, correlations, params and license/revision reporting code.
+10. Synthetic tests/build checks and deployed live-graph UI verification. Model A actual dummy-image inference passed on MPS; optional dummy-classifier/processor test passed. No real dataset accuracy is established.
+
+### Newly verified — 2026-10-11
+
+- Actual Model B inference on MPS; all 18 Python tests and nine frontend tests pass.
+- Actual model revision/license/parameter report generated; zero available labeled videos explicitly reported.
+- Latest source archive and deployments verified.
+- Real webcam initialization, calibration, live graph, finish, cancellation and navigation cleanup verified.
+- Disposable graph save/reload/view/delete/reload verified with user consent; test graph removed.
+- Narrow populated mobile layouts and keyboard graph/table access verified.
+- Camera diagnostics on real inputs: about 9.2 processed frames/s, 21.1 ms mean landmark inference and 24.1 ms mean analysis processing in one session. These are efficiency measurements, not stress accuracy.
+- Idle-page hidden warning fixed, initialization bounded, and late resources disposed after cancellation/timeout.
+- Experiment tab blank screen resolved: added missing `React` import to `frontend/src/Experiment.jsx` and added top-level `ErrorBoundary` in `frontend/src/main.jsx`.
+- Verified live deployment at https://jyotiraditya21-bug.github.io/pause-stress-mvp/: navigation to Experiment view successfully renders headings, instructions, and download links with zero console errors.
 
 ### Remaining — 3 groups (inputs or controlled tests required)
 
@@ -281,3 +282,56 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Updated stress_math README and dependencies documentation; frontend source unchanged.
 - [x] Verification: 36 Python tests passed, one optional HF inference test skipped because Torch/Transformers are absent in this environment. Pulse smoke and the new Node/Python parity tests passed.
 - [ ] Real-video evaluation remains unverified: no labeled evaluation videos were provided in this worktree. The local MediaPipe detector smoke attempt could not create an NSOpenGL context in this execution environment. Offline pose estimates use OpenCV solvePnP, so frames near browser pose thresholds may classify differently.
+
+## Production hardening — 2026-10-13
+
+- [x] Create `prod-hardening`; keep `main` untouched by the production branch work.
+- [x] Change generic mode to three dynamic geometry features and add versioned, expiring four-feature personal baselines.
+- [x] Add MAD-based result ranges, nine explicit window values, actionable warnings, failure status and privacy-safe quality flags.
+- [x] Add the quality-gated countdown, pause/resume hints, independent 25-second wall-clock cap, video-frame callback path and clean camera/model disposal.
+- [x] Keep the Python deployed mirror and D0/D1 evaluator aligned with quick-2.0; deterministic JavaScript/Python parity passes within 1e-6.
+- [x] Replace the main UI with the mobile-first Scan, Results and History flow; add onboarding, calibration/reset, settings, Privacy and About pages.
+- [x] Add PWA precaching, lazy MediaPipe loading, error boundary, CSP/security headers, optional scrubbed Sentry and score-free Plausible events.
+- [x] Add Playwright/axe/Lighthouse configuration, GitHub Actions jobs, Cloudflare deployment instructions and validation roadmap.
+- [x] Verification: 27 frontend unit tests passed, production PWA build passed, and 36 Python tests passed with one optional HF dependency smoke test skipped.
+- [x] Playwright: 10/10 main E2E checks passed, including zero serious/critical axe findings and no horizontal overflow at 360×640, 390×844, 768×1024 and 1280×800.
+- [x] Production PWA: the app reloaded offline after its first cached load and initialized the camera scan from precached MediaPipe assets.
+- [x] Mobile Lighthouse: Performance 98, Accessibility 100, Best Practices 100, SEO 100.
+- [ ] No real labeled-dataset accuracy, repeatability PASS or model-licensing completion is claimed; all remain NOT DONE in `docs/VALIDATION_TODO.md`.
+
+## Movement/expression tolerance — 2026-10-15
+
+- [x] Add shared exported provisional configuration (`toleranceConfig.json` / `TOLERANCE_CONFIG`), soft pose/speed/light/size weights, weighted medians, and effective slot coverage. Keep the original four-feature canonical formula/spreads/sigma floor/z clipping in the tolerant comparator.
+- [x] Mask mouth features individually and jaw geometry at high yaw without dropping brow observations. Windows require two valid features. Expose used feature counts, confidence, ranges and NORMAL/LIMITED/NONE tiers; NONE never emits a number.
+- [x] Add timestamp-based One Euro smoothing, reset after face loss, optional inverse-rotation 3-D correction (OFF), and adaptive 10–20 second acquisition. Preserve true time gaps, first-second exclusion and camera cleanup.
+- [x] Add the opt-in browser path `?tolerance=1`, extension progress/hints and result details. Keep the existing strict default pending actual adoption evidence. No main/deployed-site changes were made in this task.
+- [x] Add independent Python mirror, shared Node fixtures, recursive 1e-6 parity, manifest-based OLD/NEW/NEW_3D comparison, condition/task metrics, cluster bootstrap CIs, acceptance–SD plot and fixed PASS/FAIL decisions. Missing evidence/extraction failures block adoption.
+- [x] Add `docs/TOLERANCE.md`, manifest schema, run commands and implementation definitions. Existing tests encoding strict gates remain unchanged; new tests live in `tolerantScan.test.js`, `test_tolerance.py`, `test_tolerance_evaluation.py` and `e2e/tolerance.spec.js`.
+- [x] Verification: 37 frontend tests passed; production PWA build passed. Python full discovery ran 41 tests: 40 passed, one optional Torch/Transformers smoke test skipped; affected tolerance tests were rerun after final edits. Browser suite: 12 passed, one separately configured offline test skipped; includes both tolerant cap/NONE and cancel cleanup checks.
+- [x] Actual bundled MediaPipe Tasks model decoded a temporary blank video outside the sandbox. Full evaluator smoke on a 20-second blank recording returned NONE/no score for OLD, NEW and NEW_3D and FAIL adoption, with no extraction failures. Sandbox-only execution cannot create NSOpenGL; no real participant video was used.
+- [ ] Authorized still/natural_movement/talking/smiling/glasses/low_light repeated recordings and UBFC-Phys data are absent. No empirical acceptance, AUC improvement or repeatability claim is made. `adopted=false` and `frontalize3d=false` remain in the shared configuration.
+
+## Light, friendly UI redesign — 2026-10-15
+
+- [x] Replace automatic dark tones with a consistent warm off-white, sage, peach and lavender theme; align mobile browser/PWA colors.
+- [x] Add a desktop two-column scan layout, clear preparation steps, friendly SVG preview, compact icon navigation and privacy reassurance.
+- [x] Add gentle entrance, breathing and scan animations with reduced-motion support. Keep text fully opaque throughout transitions for accessible contrast.
+- [x] Update Results presentation and consolidate actions around Save this result, Scan again and optional calibration. Preserve every score, acquisition rule and camera lifecycle behavior.
+- [x] Refine narrow/short mobile layouts; visually confirm the start button fits at 360×640 and light colors remain active under a dark system preference.
+- [x] Verification: 37 frontend unit tests passed, production PWA build passed, and all 10 main Playwright checks passed, including Scan/Result/History axe checks and four viewport overflow checks. Desktop, phone and Results screenshots inspected. No scoring or Python research changes; no new dependencies.
+- [x] Local development server remains available at `http://127.0.0.1:5173/?tolerance=1`. This UI revision has not been deployed to GitHub Pages.
+
+## Repository presentation — 2026-10-15
+
+- [x] Rewrite README around the current experience, inspected UI preview, branch/deployment status, quick start, modes, privacy, checks and documentation index. Preserve honest validation and licensing status.
+- [x] Move earlier setup/demo/validation guides and six phase screenshots into `docs/archive/`; retain historical assets and fix the current research-status reference.
+- [x] Add contribution/security guidance, bug/feature issue forms and a pull-request template. Add read-only branch/PR CI for frontend tests/build and Python/parity tests.
+- [x] Extend ignore rules for local environment variants, keys, logs and Python tooling artifacts while preserving `.env.example` templates.
+- [x] Verify 22 current local documentation/image links and whitespace checks; tracked-path audit found no environment secrets, recordings, databases, caches or dependency/build directories.
+
+## Live release — 2026-10-15
+
+- [x] Confirm no open GitHub issues; resolve PR #1 conflicts with the earlier main-branch UI revert, preserving the latest light interface and research code.
+- [x] Require browser and offline checks before the Pages deployment job; update README for main-based releases.
+- [x] Recheck 37 frontend unit tests and production build successfully after restoring supporting UI pages.
+- [ ] Verify merged main Pages deployment and live assets.

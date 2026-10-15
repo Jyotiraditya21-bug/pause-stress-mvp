@@ -1,5 +1,16 @@
 # Training-free facial behavior experiment
 
+## Provisional tolerant acquisition comparison
+
+`tolerant_scan.py` mirrors `frontend/src/tolerantScan.js`, reading the same `toleranceConfig.json`. `evaluate_tolerance.py` compares OLD four-feature hard gating with NEW weighted/masked/smoothed acquisition, with and without optional 3-D correction. No source labels enter prediction. The existing module APIs and evaluators are preserved.
+
+```sh
+stress_math/.venv/bin/python -m stress_math.evaluate_tolerance --manifest stress_math/tolerance_manifest.example.csv --output stress_math/results/tolerance
+MPLCONFIGDIR=/tmp/pause-mpl stress_math/.venv/bin/python -m unittest stress_math.test_tolerance stress_math.test_tolerance_evaluation -v
+```
+
+The example has only headers, so its report correctly says FAIL/unavailable. Populate a copy using authorized videos and explicit still/natural_movement/talking/smiling/glasses/low_light condition metadata. See [../docs/TOLERANCE.md](../docs/TOLERANCE.md) for schema, fixed definitions, adoption rules and limitations. Real Tasks detector execution on macOS needs a usable OpenGL context even with CPU inference; a headless sandbox may block it. The runner lists extraction failures and rejects adoption rather than generating synthetic landmarks or scores. No new Python dependencies are required.
+
 Separate Python module. Existing frontend/backend and deployed Pages app are unchanged. This is an experimental **stress-associated facial behavior index**, not a percentage of stress or a diagnostic measurement. No training, fitting of prediction weights, fine-tuning, threshold optimization, or supervised parameter selection occurs. Test videos are used only for evaluation; the first 25 seconds of designated rest provide the requested personal baseline mean and standard deviation.
 
 ## Run on an M1 Mac
