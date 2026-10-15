@@ -334,4 +334,5 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Confirm no open GitHub issues; resolve PR #1 conflicts with the earlier main-branch UI revert, preserving the latest light interface and research code.
 - [x] Require browser and offline checks before the Pages deployment job; update README for main-based releases.
 - [x] Recheck 37 frontend unit tests and production build successfully after restoring supporting UI pages.
-- [ ] Verify merged main Pages deployment and live assets.
+- [x] PR #1 merged as `590e66b`; Pages run `38776587447` passed browser/offline, Lighthouse and deployment jobs. Local browser suite: 12 passed plus the separate offline test; default-suite offline skip is intentional.
+- [x] Verify the public site at a 390×844 viewport: HTTP 200, expected scan heading/button, no horizontal overflow, no page errors or serious/critical axe violations. Model, WASM, manifest and service worker each return HTTP 200. These checks do not establish stress accuracy or real-camera repeatability.
