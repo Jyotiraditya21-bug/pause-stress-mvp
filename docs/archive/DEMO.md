@@ -1,5 +1,7 @@
 # Pause MVP demo
 
+> Historical snapshot. For the current browser-only experience, follow the [project README](../../README.md).
+
 ## Start
 
 Follow README.md to run FastAPI on 127.0.0.1:8000 and Vite on 127.0.0.1:5173. If both are already running, reuse them.

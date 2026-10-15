@@ -320,3 +320,11 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Refine narrow/short mobile layouts; visually confirm the start button fits at 360×640 and light colors remain active under a dark system preference.
 - [x] Verification: 37 frontend unit tests passed, production PWA build passed, and all 10 main Playwright checks passed, including Scan/Result/History axe checks and four viewport overflow checks. Desktop, phone and Results screenshots inspected. No scoring or Python research changes; no new dependencies.
 - [x] Local development server remains available at `http://127.0.0.1:5173/?tolerance=1`. This UI revision has not been deployed to GitHub Pages.
+
+## Repository presentation — 2026-10-15
+
+- [x] Rewrite README around the current experience, inspected UI preview, branch/deployment status, quick start, modes, privacy, checks and documentation index. Preserve honest validation and licensing status.
+- [x] Move earlier setup/demo/validation guides and six phase screenshots into `docs/archive/`; retain historical assets and fix the current research-status reference.
+- [x] Add contribution/security guidance, bug/feature issue forms and a pull-request template. Add read-only branch/PR CI for frontend tests/build and Python/parity tests.
+- [x] Extend ignore rules for local environment variants, keys, logs and Python tooling artifacts while preserving `.env.example` templates.
+- [x] Verify 22 current local documentation/image links and whitespace checks; tracked-path audit found no environment secrets, recordings, databases, caches or dependency/build directories.
