@@ -298,3 +298,15 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Production PWA: the app reloaded offline after its first cached load and initialized the camera scan from precached MediaPipe assets.
 - [x] Mobile Lighthouse: Performance 98, Accessibility 100, Best Practices 100, SEO 100.
 - [ ] No real labeled-dataset accuracy, repeatability PASS or model-licensing completion is claimed; all remain NOT DONE in `docs/VALIDATION_TODO.md`.
+
+## Movement/expression tolerance — 2026-10-15
+
+- [x] Add shared exported provisional configuration (`toleranceConfig.json` / `TOLERANCE_CONFIG`), soft pose/speed/light/size weights, weighted medians, and effective slot coverage. Keep the original four-feature canonical formula/spreads/sigma floor/z clipping in the tolerant comparator.
+- [x] Mask mouth features individually and jaw geometry at high yaw without dropping brow observations. Windows require two valid features. Expose used feature counts, confidence, ranges and NORMAL/LIMITED/NONE tiers; NONE never emits a number.
+- [x] Add timestamp-based One Euro smoothing, reset after face loss, optional inverse-rotation 3-D correction (OFF), and adaptive 10–20 second acquisition. Preserve true time gaps, first-second exclusion and camera cleanup.
+- [x] Add the opt-in browser path `?tolerance=1`, extension progress/hints and result details. Keep the existing strict default pending actual adoption evidence. No main/deployed-site changes were made in this task.
+- [x] Add independent Python mirror, shared Node fixtures, recursive 1e-6 parity, manifest-based OLD/NEW/NEW_3D comparison, condition/task metrics, cluster bootstrap CIs, acceptance–SD plot and fixed PASS/FAIL decisions. Missing evidence/extraction failures block adoption.
+- [x] Add `docs/TOLERANCE.md`, manifest schema, run commands and implementation definitions. Existing tests encoding strict gates remain unchanged; new tests live in `tolerantScan.test.js`, `test_tolerance.py`, `test_tolerance_evaluation.py` and `e2e/tolerance.spec.js`.
+- [x] Verification: 37 frontend tests passed; production PWA build passed. Python full discovery ran 41 tests: 40 passed, one optional Torch/Transformers smoke test skipped; affected tolerance tests were rerun after final edits. Browser suite: 12 passed, one separately configured offline test skipped; includes both tolerant cap/NONE and cancel cleanup checks.
+- [x] Actual bundled MediaPipe Tasks model decoded a temporary blank video outside the sandbox. Full evaluator smoke on a 20-second blank recording returned NONE/no score for OLD, NEW and NEW_3D and FAIL adoption, with no extraction failures. Sandbox-only execution cannot create NSOpenGL; no real participant video was used.
+- [ ] Authorized still/natural_movement/talking/smiling/glasses/low_light repeated recordings and UBFC-Phys data are absent. No empirical acceptance, AUC improvement or repeatability claim is made. `adopted=false` and `frontalize3d=false` remain in the shared configuration.

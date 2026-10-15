@@ -89,4 +89,6 @@ stress_math/.venv/bin/python -m unittest discover -s stress_math -t .
 
 ## Deployment
 
+The provisional movement-tolerant scan can be tried locally with `?tolerance=1`. It uses weighted acquisition, per-feature masks, adaptive 10–20 second capture and NORMAL/LIMITED/NONE tiers. It remains opt-in until authorized condition recordings and UBFC-Phys evaluation meet the fixed adoption criteria. See [docs/TOLERANCE.md](docs/TOLERANCE.md) for the shared configuration, manifest and evaluation commands. The existing strict default is retained; no tolerance accuracy is claimed.
+
 The frontend deploys as a static Progressive Web App (PWA) to GitHub Pages or Cloudflare Pages. See [docs/DEPLOY.md](docs/DEPLOY.md) for full deployment instructions and custom domain setup.

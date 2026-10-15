@@ -25,7 +25,7 @@ function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline
       {result.range&&<p className="range-line">Likely scan range: {result.range[0].toFixed(1)}–{result.range[1].toFixed(1)}</p>}
       <button className="pz-btn pz-btn-primary" onClick={onSave} disabled={isSaved}>{isSaved?'Result saved':'Save this result'}</button>
       <button className="pz-btn pz-btn-quiet" onClick={onCalibrate}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>
-      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd><dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd></dl></details>
+      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd><dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd>{result.tier&&<><dt>Tier</dt><dd>{result.tier}</dd><dt>Confidence</dt><dd>{result.confidence.toFixed(2)}</dd><dt>Features per window</dt><dd>{result.windowFeaturesUsed.join(', ')}</dd></>}</dl></details>
     </div>}
   </section>;
 }
@@ -46,10 +46,12 @@ function App(){
   },[]);
   const navigate=next=>{setScreen(next);setNotice('');setError('')};
   function complete(session){
-    if(calibrating&&session.status!=='failed'&&session.featureStats){
-      const saved=saveBaseline(session.featureStats);setBaselineState(saved);session.mode='calibration';
+    const completeBaseline=['brow_furrow','lip_press','lip_corner','jaw_clench'].every(k=>Number.isFinite(session.featureStats?.[k]?.median)&&Number.isFinite(session.featureStats?.[k]?.mad));
+    if(calibrating&&session.status!=='failed'&&completeBaseline){
+      const saved=saveBaseline(session.featureStats);setBaselineState(saved);session.mode=saved?'calibration':'generic';
       setNotice(saved?'Your calm baseline is active.':'The baseline could not be saved in this browser.');
     }
+    else if(calibrating){session.mode='generic';setNotice('No new baseline was saved. Calibrate with your mouth relaxed and your face toward the camera.');}
     setResult(session);setCalibrating(false);setScreen('Result');
   }
   function startCalibration(){setCalibrating(true);setResult(null);navigate('Scan')}
