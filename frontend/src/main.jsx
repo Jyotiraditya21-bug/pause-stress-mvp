@@ -8,6 +8,7 @@ import {readCameraSessions,readCameraSessionState,repairCameraSessions,deleteRec
 import {readBaseline,resetBaseline,saveBaseline} from './baselineStorage.js';
 import {initializeMonitoring} from './monitoring.js';
 import {registerSW} from 'virtual:pwa-register';
+import {preloadLandmarker} from './CameraScan.jsx';
 
 const HistoryPage=lazy(()=>import('./pages/HistoryPage.jsx'));
 const Experiment=lazy(()=>import('./Experiment.jsx'));
@@ -32,7 +33,7 @@ function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline
     </>;
   return <section className="result-screen"><h1>Calm index result</h1><ResultCard status={result.status||result.quality} score={result.average} windows={result.windowScores||result.points?.map(p=>p.value)||[]} reason={result.failReason||result.reason} warnings={result.warnings||[]} onRetry={onRetry} onDone={onDone} caption={caption} actions={actions}>
     {usable&&
-      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd><dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd>{result.tier&&<><dt>Tier</dt><dd>{result.tier}</dd><dt>Confidence</dt><dd>{result.confidence.toFixed(2)}</dd><dt>Features per window</dt><dd>{result.windowFeaturesUsed.join(', ')}</dd></>}</dl></details>
+      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd>{result.mlResult&&<><dt>Experimental Neural Score</dt><dd>{(result.mlResult.averageStressProbability*100).toFixed(1)}% stress probability ({result.mlResult.classification})</dd></>}<dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd>{result.tier&&<><dt>Tier</dt><dd>{result.tier}</dd><dt>Confidence</dt><dd>{result.confidence.toFixed(2)}</dd><dt>Features per window</dt><dd>{result.windowFeaturesUsed.join(', ')}</dd></>}</dl></details>
     }
   </ResultCard></section>;
 }
@@ -43,14 +44,16 @@ function App(){
   const [screen,setScreen]=useState(()=>fixture?'Result':wasOnboarded()?'Scan':'Onboarding');
   const [result,setResult]=useState(fixture),[calibrating,setCalibrating]=useState(false);
   const [baseline,setBaselineState]=useState(()=>readBaseline());
+  const [mlEnabled,setMlEnabled]=useState(()=>{try{return localStorage.getItem('pause.ml.enabled')==='1'}catch{return false}});
   const [sessions,setSessions]=useState(()=>{try{return readCameraSessions()}catch{return[]}});
   const [storageState,setStorageState]=useState(()=>readCameraSessionState());
   const [notice,setNotice]=useState(''),[error,setError]=useState('');
+  function toggleML(){const next=!mlEnabled;setMlEnabled(next);try{localStorage.setItem('pause.ml.enabled',next?'1':'0')}catch{}setNotice(next?'Experimental Neural Model enabled for camera scans.':'Neural model disabled. Using geometric QuickIndex.');}
   useEffect(()=>{
     initializeMonitoring().catch(()=>{});registerSW({immediate:true});
+    preloadLandmarker().catch(()=>{});
     const preload=()=>{const link=document.createElement('link');link.rel='prefetch';link.href=`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`;document.head.appendChild(link)};
-    const id=globalThis.requestIdleCallback?.(preload,{timeout:20000})??setTimeout(preload,15000);
-    return()=>globalThis.cancelIdleCallback?.(id)??clearTimeout(id);
+    preload();
   },[]);
   const navigate=(next,{calibration=false}={})=>{setCalibrating(calibration);if(next==='Scan')setBaselineState(readBaseline());setScreen(next);setNotice('');setError('')};
   function complete(session){
@@ -78,7 +81,7 @@ function App(){
       {screen==='Scan'&&<ScanScreen onComplete={complete} baseline={calibrating?null:baseline} calibrating={calibrating}/>} 
       {screen==='Result'&&result&&<ResultScreen result={result} isSaved={saved} onRetry={()=>navigate('Scan')} onDone={()=>navigate('History')} onSave={save} onCalibrate={startCalibration} baseline={baseline}/>} 
       {screen==='History'&&<HistoryPage sessions={sessions} onView={session=>{setResult(session);navigate('Result')}} onDelete={remove} onScan={()=>navigate('Scan')}/>} 
-      {screen==='Settings'&&<main className="page settings"><h1>Settings</h1><section className="pz-panel"><h2>Personal baseline</h2><p>Calibrate when calm so future scores compare you with your own calm face.</p><button className="pz-btn pz-btn-primary" onClick={startCalibration}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>{baseline&&<button className="pz-btn pz-btn-quiet" onClick={clearBaseline}>Reset baseline</button>}</section><section className="pz-panel"><h2>History recovery backups</h2><p>Recovery keeps an original copy on this device, including any scans later deleted from History. Delete recovery backups when you no longer need them. This leaves your current saved scans intact.</p><button className="pz-btn pz-btn-quiet" onClick={clearRecovery}>Delete recovery backups</button></section></main>}
+      {screen==='Settings'&&<main className="page settings"><h1>Settings</h1><section className="pz-panel"><h2>Personal baseline</h2><p>Calibrate when calm so future scores compare you with your own calm face.</p><button className="pz-btn pz-btn-primary" onClick={startCalibration}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>{baseline&&<button className="pz-btn pz-btn-quiet" onClick={clearBaseline}>Reset baseline</button>}</section><section className="pz-panel"><h2>Experimental Neural Model (MobileNetV3)</h2><p>Trained exploratory image-level model (74.25% validation balanced accuracy, 0.8125 ROC-AUC). Evaluates face crops in real time with EMA smoothing. Runs 100% on-device in WebAssembly.</p><button className={`pz-btn ${mlEnabled?'pz-btn-primary':'pz-btn-quiet'}`} onClick={toggleML}>{mlEnabled?'Neural model enabled':'Enable neural model in scan'}</button><p className="note" style={{marginTop:'0.5rem',fontSize:'0.82rem',color:'#717672'}}>Statistical facial pattern recognition only. Not a medical measurement or clinical stress diagnosis.</p></section><section className="pz-panel"><h2>History recovery backups</h2><p>Recovery keeps an original copy on this device, including any scans later deleted from History. Delete recovery backups when you no longer need them. This leaves your current saved scans intact.</p><button className="pz-btn pz-btn-quiet" onClick={clearRecovery}>Delete recovery backups</button></section></main>}
       {screen==='Privacy'&&<PrivacyPage/>}{screen==='About'&&<AboutPage/>}{screen==='Lab'&&lab&&<main className="page lab-page"><h1>Lab</h1><Experiment/></main>}
     </Suspense></div>
     <footer className="site-footer"><span className="footer-note"><Icon name="shield" size={14}/>A private moment. A little more awareness.</span><div className="footer-links"><button onClick={()=>navigate('Privacy')}>Privacy</button><button onClick={()=>navigate('About')}>About this index</button><button onClick={()=>navigate('Settings')}>Settings</button></div></footer>

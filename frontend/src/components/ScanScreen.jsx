@@ -3,10 +3,10 @@ import CameraScan from '../CameraScan.jsx';
 import Icon from './Icon.jsx';
 
 export default function ScanScreen({onComplete,baseline,calibrating=false}) {
-  return <CameraScan onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active})=>{
+  return <CameraScan onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active,videoReady})=>{
     const starting=state==='permission'||state==='loading';
     const title=calibrating?'Calibrate when calm':'Your Calm index';
-    const status=error||starting?'Starting camera…':state==='positioning'?'Fit your face in the circle':state==='analyzing'?'Calculating…':paused?hint:state==='countdown'?'Scanning your face':hint;
+    const status=error||starting?'Starting camera…':state==='positioning'?'Center your face in view':state==='analyzing'?'Calculating…':paused?hint:state==='countdown'?'Scanning your face…':hint;
     return <main className="scan-screen">
       <div className="scan-story">
         <span className="welcome-chip"><span/>A little space for yourself</span>
@@ -24,9 +24,26 @@ export default function ScanScreen({onComplete,baseline,calibrating=false}) {
       <div className="scan-card-heading"><span><Icon name="scan"/> {calibrating?'Personal baseline':'Your daily pause'}</span><span className="duration-pill">{extended?'Up to 20 sec':'10 sec'}</span></div>
       <p className="scan-mode-note">{tolerant?'Experimental movement-tolerant mode · 10–20 seconds.':'10-second capture after positioning. Setup may take longer.'}</p>
       <div className={`scan-circle ${paused?'is-paused':''} ${starting?'is-loading':''}`} style={{'--progress':progress}}>
-        <svg className="scan-ring" viewBox="0 0 320 320" aria-hidden="true"><circle cx="160" cy="160" r="147"/><circle className="scan-ring-fill" cx="160" cy="160" r="147" pathLength="1"/></svg>
-        <div className="scan-camera"><video ref={videoRef} autoPlay playsInline muted/><canvas ref={overlayRef} aria-hidden="true"/>{!active&&<div className="scan-placeholder" aria-hidden="true"><svg viewBox="0 0 220 220"><circle className="face-halo" cx="110" cy="110" r="88"/><path className="face-shoulders" d="M48 220c0-42 27-64 62-64s62 22 62 64"/><path className="face-shape" d="M70 86c0-32 17-50 40-50s40 18 40 50v28c0 31-19 52-40 52s-40-21-40-52Z"/><path className="face-hair" d="M69 89c-9-39 15-60 41-60 31 0 48 26 41 62-9-2-16-15-18-26-13 15-38 24-64 24Z"/><path className="face-detail" d="M86 108h5m38 0h5m-27 8-3 12h9m-13 14c7 5 14 5 21 0"/></svg><span className="face-target target-one"/><span className="face-target target-two"/></div>}{state==='countdown'&&<div className="scan-sweep" aria-hidden="true"/>}</div>
-        {state==='countdown'&&<span className="scan-badge">{secondsRemaining}</span>}
+        <svg className="scan-ring" viewBox="0 0 320 320" aria-hidden="true">
+          <circle cx="160" cy="160" r="147"/>
+          <circle className="scan-ring-fill" cx="160" cy="160" r="147" pathLength="1"/>
+        </svg>
+        <div className="scan-camera">
+          <video ref={videoRef} autoPlay playsInline muted className={videoReady?'is-ready':''}/>
+          <canvas ref={overlayRef} aria-hidden="true"/>
+          {(!active || !videoReady) && (
+            <div className="scan-placeholder" aria-hidden="true">
+              <svg viewBox="0 0 220 220">
+                <circle className="face-halo" cx="110" cy="110" r="88"/>
+                <path className="face-shoulders" d="M48 220c0-42 27-64 62-64s62 22 62 64"/>
+                <path className="face-shape" d="M70 86c0-32 17-50 40-50s40 18 40 50v28c0 31-19 52-40 52s-40-21-40-52Z"/>
+                <path className="face-hair" d="M69 89c-9-39 15-60 41-60 31 0 48 26 41 62-9-2-16-15-18-26-13 15-38 24-64 24Z"/>
+                <path className="face-detail" d="M86 108h5m38 0h5m-27 8-3 12h9m-13 14c7 5 14 5 21 0"/>
+              </svg>
+            </div>
+          )}
+        </div>
+        {state==='countdown' && <span className="scan-badge">{secondsRemaining}</span>}
       </div>
       <div className="scan-ready-label">{starting?'Getting ready':active?'A moment just for you':'Ready when you are'}</div>
       <p className="scan-hint" aria-live="polite">{error||(extended?'Almost there, small movements are fine':state==='countdown'?hint:status)}</p>

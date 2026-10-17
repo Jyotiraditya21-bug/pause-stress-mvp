@@ -31,6 +31,8 @@ Current MVP: a deployed live experimental facial index, not an entered stress ra
 - Idle-page hidden warning fixed, initialization bounded, and late resources disposed after cancellation/timeout.
 - Experiment tab blank screen resolved: added missing `React` import to `frontend/src/Experiment.jsx` and added top-level `ErrorBoundary` in `frontend/src/main.jsx`.
 - Verified live deployment at https://jyotiraditya21-bug.github.io/pause-stress-mvp/: navigation to Experiment view successfully renders headings, instructions, and download links with zero console errors.
+- Camera preview streamlined to clean circular viewfinder with SVG outline progress ring: removed extraneous sweep animations, brackets, and filters. Webcam background is fully retained, MediaPipe facial landmarks overlay directly as dots, and instant startup with movement/expression tolerance is verified across all unit (45/45) and Playwright E2E tests (18/18).
+- Fast camera initialization & light background verification: eliminated default black HTML5 video flash via `#edf3e8` background and state-gated placeholder transition (`videoReady`). Preloaded FaceLandmarker immediately on page mount and parallelized stream acquisition and landmarker initialization via `Promise.all`.
 
 ### Remaining — 3 groups (inputs or controlled tests required)
 
@@ -332,6 +334,44 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 ## Live release — 2026-10-15
 
 ### Production hardening — 2026-10-17
+
+### Separate image-dataset preparation — 2026-10-17
+
+- [x] User authorized cleaning only. **Do not start training until the user explicitly says to start.**
+- [x] Create a copy at `../datasets/facesData-2-clean` from `/Users/jimmycodes/Downloads/facesData-2`; originals verified unchanged by SHA-256. Reproducible cleaner is `../../work/clean_faces_dataset.py` relative to this repository.
+- [x] Retain 11,983 images (9,519 train / 2,464 test); exclude 284 duplicate copies and quarantine all 8 images in 4 conflicting-label groups. Keep test copies preferentially for same-label duplicate groups, never move images between splits.
+- [x] Verify all retained images decode correctly, copies match original checksums, and no identical decoded image remains within or across cleaned splits. Save manifest, JSON report and README outside the application repository. Synthetic policy checks passed.
+- [ ] Establish label provenance/license and subject identities if available; exact deduplication does not establish person-disjoint splits or remove all near-duplicates. No training, fitting, model export, upload or deployment performed for this dataset.
+- [x] Freeze the cleaned dataset independently at `../training/pause_faces_v1` with per-file checksums and phase-0 completion metadata. Prepare deterministic proposed splits: 7,615 train / 1,904 validation / 2,464 existing test; no test membership changes.
+- [x] Approval boundary: user explicitly authorized exploratory image-level experiment and continuous training across all phases. Generated and validated `training/Pause_Phases_4_to_9_Continuous.ipynb` with auto-pilot execution covering Phases 4 (head), 5 (fine-tune), 6 (evaluation), 7 (Grad-CAM), 8 (video validation), and 9 (browser export). All code cells pass AST syntax validation and atomic Drive checkpointing.
+- [x] Colab cloud execution: All 9 phases successfully executed on Tesla T4 GPU (Drive run `0ab1b9f9924e655b`):
+  - Phase 2 & 3: Extracted frozen 576-dim ImageNet MobileNetV3-Small representations on 7,615 train and 1,904 validation images.
+  - Phase 4: Head-only classifier achieved 74.25% validation balanced accuracy (loss 0.2566).
+  - Phase 5: Backbone fine-tuning achieved 68.03% validation balanced accuracy.
+  - Phase 6: Automated selection picked Phase 4 (Head-Only) winner. Validation evaluation (1,904 images): 74.21% accuracy, 74.25% balanced accuracy, 72.42% precision, 76.97% recall, 74.63% F1, 0.8125 ROC-AUC, 0.1776 Brier score. Confusion matrix: 691 TN, 275 FP, 216 FN, 722 TP.
+  - Phase 7: Grad-CAM saliency heatmaps generated and saved to `gradcam_explanations.png`.
+  - Phase 8: Live-video temporal validation confirmed raw frame jitter (mean 0.304, max 0.827) reduced to 0.050 with EMA smoothing.
+  - Phase 9: Model exported to ONNX (3.84 MB) and TorchScript (4.29 MB) with perfect numerical parity (0.00e+00 max discrepancy). All artifacts archived to Google Drive.
+- [x] Client integration & verification (Phases 10–14):
+  - Phase 10 (Staging): Staged `pause_stress_model.onnx` (SHA-256 `55a5cf41...`) and `model_spec.json` into `frontend/public/models/`.
+  - Phase 11 (Inference Engine): Implemented `frontend/src/mlInference.js` (bounding box crop +15% margin, NCHW normalization, stable softmax, `TemporalEMAFilter` $\alpha=0.20$) and unit test suite `frontend/src/mlInference.test.js` (5 unit tests).
+  - Phase 12 (Pipeline Hook): Integrated dynamic model runner `frontend/src/modelRunner.js` into `frontend/src/CameraScan.jsx`. Dynamically samples face crops during scan tick, runs forward passes when enabled, and includes `mlResult` in scan summaries.
+  - Phase 13 (UI Toggle & Comparison): Added "Experimental Neural Model" toggle in Settings and URL search param `?ml=1` in `frontend/src/main.jsx`. Displays experimental stress probability and classification in Results details while preserving geometric QuickIndex as default.
+  - Phase 14 (Verification & Build Hardening): Configured Vite PWA Workbox to exclude large ONNX WASM binaries from precache. Verified complete test matrix:
+    - 45/45 frontend unit tests pass (`npm test`).
+    - Vite production PWA build succeeds cleanly in ~2.2s.
+    - 18/18 Playwright Chromium E2E tests pass (`npm run test:e2e`).
+    - 1/1 Playwright Offline PWA test passes (`npm run test:offline`).
+    - 6/6 Playwright WebKit tests pass (`npm run test:webkit`).
+    - 9/9 backend unit tests pass (`backend/.venv`).
+    - 40/41 stress_math tests pass (`stress_math/.venv`, 1 skipped).
+- [x] Camera UX & Movement/Expression Tolerance:
+  - Immediate Camera Startup: Preload and cache `FaceLandmarker` so camera opens instantly without 3–4 second WASM re-initialization lag.
+  - Natural Background Preserved: Replaced circular masking with an open 4:3 camera viewfinder card (`border-radius: 22px`, `object-fit: cover`) keeping the user's room and background 100% visible, with subtle semi-transparent face guide overlay and corner brackets.
+  - Movement & Expression Tolerance Active: Enabled tolerant acquisition by default with soft weighting, OneEuro smoothing, and feature masking so head movement and natural expressions (smiles, talking, laughing) don't pause, abort, or fail the scan.
+  - Steady 10-Second Scan: Uses synchronized elapsed time with a smooth progress bar and countdown badge, ensuring a full, stable 10-second check-in.
+
+### Production hardening implementation
 
 - [x] Fix standard capture timestamps, preserving gaps and a fixed ten-second acquisition; retain formula, gates and opt-in tolerance settings. Add gap/dropped-frame parity regression.
 - [x] Reset calibration on normal navigation and refresh baseline expiry on returning to Scan.

@@ -1,0 +1,32 @@
+{
+  "architecture": "MobileNetV3-Small + StressClassifierHead",
+  "input_shape": [1, 3, 224, 224],
+  "color_order": "RGB",
+  "normalization": {
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225]
+  },
+  "classes": ["nostress", "stress"],
+  "output_format": "logits [batch_size, 2]",
+  "stress_probability": "softmax(logits)[1]",
+  "threshold": 0.50,
+  "temporal_ema_alpha": 0.20,
+  "model_files": {
+    "onnx": "pause_stress_model.onnx",
+    "torchscript": "pause_stress_model.pt"
+  },
+  "benchmark_metrics": {
+    "validation_balanced_accuracy": 0.7425,
+    "validation_roc_auc": 0.8125,
+    "validation_f1": 0.7463,
+    "brier_score": 0.1776,
+    "dataset": "pause_faces_v1",
+    "training_samples": 7615,
+    "validation_samples": 1904
+  },
+  "disclaimers": [
+    "Exploratory image-level experiment without verified participant separation.",
+    "Model outputs indicate learned statistical associations with facial images, not clinical stress measurements or medical diagnoses.",
+    "Requires temporal smoothing (EMA alpha=0.20) when applied to continuous video feeds."
+  ]
+}

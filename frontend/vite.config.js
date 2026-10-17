@@ -13,6 +13,6 @@ export default defineConfig({
       {src:'icons/pause-512.png',sizes:'512x512',type:'image/png'},
       {src:'icons/pause-maskable-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}
     ]},
-    workbox:{globPatterns:['**/*.{js,css,html,svg,png,wasm,task}'],maximumFileSizeToCacheInBytes:15*1024*1024,navigateFallback:'index.html'}
+    workbox:{globPatterns:['**/*.{js,css,html,svg,png,wasm,task}'],globIgnores:['**/onnx/**','**/*ort-wasm*.*','**/models/**'],maximumFileSizeToCacheInBytes:15*1024*1024,navigateFallback:'index.html'}
   })]
 });

@@ -72,14 +72,16 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .duration-pill { padding: 6px 10px; border-radius: 20px; border: 1px solid #e6ebdf; background: #f8faf4; font-size: 11px; white-space: nowrap; }
 .scan-mode-note { margin: 0; color: var(--ink-soft); font-size: 11px; line-height: 1.5; }
 .trend-dates { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-soft); font-size: 11px; }
-.scan-circle { position: relative; width: min(100%,340px); aspect-ratio: 1; margin: 11px auto 4px; }
+.scan-circle { position: relative; width: min(100%,320px); aspect-ratio: 1; margin: 11px auto 4px; }
 .scan-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
 .scan-ring circle { fill: none; stroke: #e3eddd; stroke-width: 8; }
 .scan-ring .scan-ring-fill { stroke: #629655; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--progress)); transition: stroke-dashoffset 900ms var(--ease),opacity .2s; }
 .scan-circle.is-paused .scan-ring-fill { opacity: .35; }
 .scan-circle.is-loading .scan-ring-fill { stroke-dasharray: .16 .84; animation: ring-spin 1.8s linear infinite; transform-origin: center; }
-.scan-camera { position: absolute; inset: 20px; border-radius: 50%; overflow: hidden; background: #edf3e8; }
-.scan-camera video,.scan-camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.scan-camera { position: absolute; inset: 16px; border-radius: 50%; overflow: hidden; background: #edf3e8; }
+.scan-camera video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 50%; background: #edf3e8; opacity: 0; transition: opacity .15s ease-out; }
+.scan-camera video.is-ready { opacity: 1; }
+.scan-camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 50%; background: transparent; pointer-events: none; }
 .scan-placeholder { position: absolute; inset: 0; background: #edf3e8; }
 .scan-placeholder>svg { width: 100%; height: 100%; display: block; animation: breathe 6s ease-in-out infinite; }
 .face-halo { fill: #dfead6; }
@@ -87,11 +89,7 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .face-shoulders { fill: #b6cba8; }
 .face-hair { fill: #7c9070; }
 .face-detail { fill: none; stroke: #88644d; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.face-target { position: absolute; width: 15px; height: 15px; border-color: #658555; border-style: solid; }
-.target-one { top: 28%; left: 17%; border-width: 1.5px 0 0 1.5px; border-radius: 4px 0 0 0; }
-.target-two { bottom: 27%; right: 17%; border-width: 0 1.5px 1.5px 0; border-radius: 0 0 4px 0; }
 .scan-badge { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); min-width: 48px; height: 48px; border-radius: 24px; background: var(--paper); border: 1px solid var(--line); display: grid; place-items: center; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.scan-sweep { position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; background: #c9e4b4; opacity: .7; animation: scan-sweep 3s ease-in-out infinite; box-shadow: 0 0 16px #c9e4b4; }
 .scan-ready-label { margin-top: 1px; font-weight: 600; font-size: 19px; letter-spacing: -.4px; }
 .scan-hint { min-height: 37px; margin: 0 auto; max-width: 320px; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
 .scan-card-footnote { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 1px 0 0; font-size: 11px; color: #677461; line-height: 1.5; }
@@ -182,7 +180,6 @@ button:active:not(:disabled) { transform: translateY(1px); }
 @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
 @keyframes quiet-pulse { 0%,100% { box-shadow: 0 0 0 0 #6b8d5020; } 50% { box-shadow: 0 0 0 5px #6b8d5000; } }
 @keyframes ring-spin { to { transform: rotate(360deg); } }
-@keyframes scan-sweep { 0%,100% { transform: translateY(-65px); } 50% { transform: translateY(65px); } }
 
 @media(min-width:1500px) { .scan-screen { padding-top: 60px; padding-bottom: 48px; }.scan-screen h1 { font-size: 60px; max-width: 500px; }.scan-intro { font-size: 22px; max-width: 430px; } }
 @media(max-width:900px) {
@@ -198,7 +195,7 @@ button:active:not(:disabled) { transform: translateY(1px); }
   .scan-screen h1 { margin: 16px 0 11px; font-size: 37px; letter-spacing: -1.5px; }.scan-intro { max-width: 300px; margin: auto; font-size: 16px; line-height: 1.5; }
   .scan-description,.scan-guide,.privacy-note { display: none; }
   .scan-card { max-width: 430px; margin: auto; padding: 19px 22px; border-radius: 25px; gap: 10px; }
-  .scan-circle { width: min(100%,260px); margin-top: 4px; }.scan-camera { inset: 17px; }
+  .scan-circle { width: min(100%,300px); margin-top: 4px; }.scan-camera { inset: 0; }
   .scan-disclaimer { margin: 0; max-width: 330px; justify-self: center; font-size: 11px; }
   .scan-about { margin-top: 0; }.scan-features { gap: 10px 16px; }.scan-features li { font-size: 11px; }.scan-about .scan-disclaimer { font-size: 11px; margin-top: 14px; }
   .site-footer { width: calc(100% - 40px); flex-direction: column; gap: 4px; padding-top: 14px; }.footer-links { gap: 23px; }.footer-note { font-size: 11px; }
@@ -223,5 +220,4 @@ button:active:not(:disabled) { transform: translateY(1px); }
 }
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-  .scan-sweep { display: none; }
 }
