@@ -5,7 +5,7 @@ export const BAD_PAUSE_SECONDS = .6;
 export const HARD_CAP_SECONDS = 25;
 
 export function createScanState(now = 0) {
-  return { state: 'positioning', wallStartedAt: now, lastAt: now, goodSince: null, badSince: null, goodElapsed: 0, paused: false };
+  return { state: 'positioning', wallStartedAt: now, lastAt: now, goodSince: null, badSince: null, goodElapsed: 0, scanStartedAt: null, elapsed: 0, paused: false };
 }
 
 export function advanceScanState(current, now, good) {
@@ -21,6 +21,7 @@ export function advanceScanState(current, now, good) {
       if (now - next.goodSince >= POSITIONING_SECONDS) {
         next.state = 'countdown';
         next.goodElapsed = 0;
+        next.scanStartedAt = now;
         next.badSince = null;
       }
     } else {
@@ -30,15 +31,17 @@ export function advanceScanState(current, now, good) {
   }
 
   if (next.state === 'countdown') {
+    // The ten-second measurement clock never pauses or compresses rejected gaps.
+    next.elapsed = Math.min(REQUIRED_GOOD_SECONDS, now - next.scanStartedAt);
     if (good) {
       next.badSince = null;
       next.paused = false;
       next.goodElapsed = Math.min(REQUIRED_GOOD_SECONDS, next.goodElapsed + dt);
-      if (next.goodElapsed >= REQUIRED_GOOD_SECONDS) next.state = 'analyzing';
     } else {
       next.badSince ??= now;
       if (now - next.badSince > BAD_PAUSE_SECONDS) next.paused = true;
     }
+    if (next.elapsed >= REQUIRED_GOOD_SECONDS) next.state = 'analyzing';
   }
   return next;
 }

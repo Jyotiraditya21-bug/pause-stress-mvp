@@ -24,7 +24,7 @@ export function readBaseline(storage = globalThis.localStorage, now = Date.now()
 }
 
 export function saveBaseline(features, storage = globalThis.localStorage, now = Date.now()) {
-  const value = { createdAt: new Date(now).toISOString(), algoVersion: ALGO_VERSION, features };
+  const value = { id: globalThis.crypto.randomUUID(), createdAt: new Date(now).toISOString(), algoVersion: ALGO_VERSION, features };
   try {
     storage?.setItem(BASELINE_KEY, JSON.stringify(value));
     return value;
