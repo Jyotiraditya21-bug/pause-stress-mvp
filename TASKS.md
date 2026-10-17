@@ -331,6 +331,33 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 
 ## Live release — 2026-10-15
 
+### Production hardening — 2026-10-17
+
+- [x] Fix standard capture timestamps, preserving gaps and a fixed ten-second acquisition; retain formula, gates and opt-in tolerance settings. Add gap/dropped-frame parity regression.
+- [x] Reset calibration on normal navigation and refresh baseline expiry on returning to Scan.
+- [x] Validate history records; offer explicit backup-before-repair recovery, separate backup deletion, and explanatory privacy copy. Preserve valid records and protect original data if backup fails.
+- [x] Separate trend groups by algorithm, source, acquisition version and personal baseline identity; exclude calibration scans and use real date spacing.
+- [x] Include the larger light UI, feature/non-diagnostic copy, subtle reduced-motion animations and experimental mode/duration labeling.
+- [x] Enforce the historical backend's local-only boundary; add body/rate limits and pagination, fix SQLite connection leaks, and add explicit backend CI. Public multi-user backend hosting remains out of scope for the static product.
+- [x] Verify 40 unit tests, production build, 18 Chromium checks, 6 WebKit UI checks, offline PWA, 9 backend tests and strict/tolerant parity. Production npm audit: zero known advisories. See docs/RELEASE_READINESS.md for physical-device and participant-evaluation gaps.
+
+### Product review — 2026-10-17 (review only)
+
+- [x] Recheck production build, 37 frontend tests, 5 isolated backend tests, 12 Chromium browser checks and the separate offline PWA test; all passed. No real-camera accuracy/repeatability or Safari validation performed.
+- [ ] Standard acquisition feeds accumulated goodElapsed into scoring; preserve real capture gaps and verify deployed/offline timing parity before changing it.
+- [ ] Reset calibration intent on ordinary navigation: reproduced Settings → calibration → History → Scan retaining calibration mode.
+- [ ] Validate each saved history record and offer recovery: synthetic `[null]` storage reproduces the app-wide error screen.
+- [ ] Separate history trends by algorithm/reference/baseline identity; current graph combines them and equally spaces dates.
+- [ ] Show experimental tolerance mode and realistic scan duration explicitly; current advertised 10 s can extend to 20 s (tolerant) or 25 s (standard cap).
+- [ ] Keep historical FastAPI backend local-only; add authentication, session ownership, pagination and request limits before any public backend deployment. Add backend tests explicitly to CI.
+- [ ] Validate participant repeatability and device/browser behavior before making accuracy claims. Latest UI refinement remains local and undeployed.
+
+### Subsequent UI refinement (local preview)
+
+- [x] Enlarge desktop content and circular preview by about 10%, retaining the palette and layout. Add a compact feature row and explicit non-diagnostic description.
+- [x] Add subtle chip pulse, staggered feature entrances, button-arrow hover and active-card emphasis, respecting reduced motion.
+- [x] Production build and 12 browser checks passed (one offline-only test intentionally skipped in this suite); desktop screenshot inspected. No scoring changes. This refinement has not yet been deployed.
+
 - [x] Confirm no open GitHub issues; resolve PR #1 conflicts with the earlier main-branch UI revert, preserving the latest light interface and research code.
 - [x] Require browser and offline checks before the Pages deployment job; update README for main-based releases.
 - [x] Recheck 37 frontend unit tests and production build successfully after restoring supporting UI pages.

@@ -6,8 +6,22 @@ from unittest.mock import patch
 from pydantic import ValidationError
 from fastapi import HTTPException
 import main
+import sqlite3
 
 class SessionsTests(unittest.TestCase):
+    def test_database_closes_connections_and_rolls_back_errors(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(main, 'DB', Path(directory)/'test.sqlite3'):
+            with main.database() as conn:
+                conn.execute('CREATE TABLE example (value INTEGER)')
+            with self.assertRaises(sqlite3.ProgrammingError):
+                conn.execute('SELECT 1')
+            with self.assertRaises(ValueError):
+                with main.database() as conn:
+                    conn.execute('INSERT INTO example VALUES (1)')
+                    raise ValueError('synthetic failure')
+            with main.database() as conn:
+                self.assertEqual(conn.execute('SELECT COUNT(*) FROM example').fetchone()[0], 0)
+
     def test_lifecycle_and_validation_in_isolated_database(self):
         async def run():
             with tempfile.TemporaryDirectory() as directory, patch.object(main, 'DB', Path(directory)/'test.sqlite3'):

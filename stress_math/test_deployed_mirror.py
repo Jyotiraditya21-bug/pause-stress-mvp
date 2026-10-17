@@ -17,7 +17,10 @@ class DeployedMirrorParity(unittest.TestCase):
         matrix=[math.cos(math.radians(20)),0,-math.sin(math.radians(20)),0,0,1,0,0,math.sin(math.radians(20)),0,math.cos(math.radians(20)),0,0,0,0,1]
         stats={k:dict(median=float(py.geometry(base)[k]),mad=float(py.SPREADS[k]/1.4826)) for k in py.BASELINE_KEYS}
         common=dict(points=[[.25,.25],[.75,.75]],width=64,height=48,faceCount=1,pixels=pixels.reshape(-1).tolist(),previous=None,poseMatrix=dict(rows=4,columns=4,data=matrix),scan=seq)
-        return [dict(common,mode='generic'),dict(common,mode='baseline',baseline=dict(algoVersion=py.ALGO_VERSION,features=stats))],frames
+        # Same capture timestamps with rejected gaps and dropped frames: never
+        # squeeze the remaining samples into ten seconds of "good time".
+        gapped=[dict(row,good=not 3<=row['time']<7) for row in seq if not 8<=row['time']<8.8]
+        return [dict(common,mode='generic'),dict(common,mode='baseline',baseline=dict(algoVersion=py.ALGO_VERSION,features=stats)),dict(common,mode='generic',scan=gapped)],frames
     def test_javascript_and_python_match_frontend_fixtures(self):
         fixtures,frames=self.fixture()
         js=subprocess.run(['node',str(ROOT/'stress_math/js_deployed_parity.mjs')],input=json.dumps(fixtures),text=True,capture_output=True,check=True)

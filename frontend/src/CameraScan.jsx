@@ -49,7 +49,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     const outcome=r.scan.index.finish(tolerant&&capped?TOLERANCE_CONFIG.maxDuration:r.scan.elapsed);
     const wall=(performance.now()-r.scan.wallStart)/1000;
     const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:tolerant?'quick-tolerant-index-v1':'quick-canonical-index-v3',...outcome,
-      status:outcome.status,mode:calibrating?'calibration':outcome.mode,frames:r.scan.total,validFrames:r.scan.valid,
+      status:outcome.status,mode:calibrating?'calibration':outcome.mode,baselineId:baseline?.id||baseline?.createdAt||null,acquisitionVersion:'capture-clock-1',frames:r.scan.total,validFrames:r.scan.valid,
       durationSeconds:wall,capped,performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(wall,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
     if(!tolerant&&capped&&summary.status==='ok'){
       summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
@@ -111,11 +111,13 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
       const previous=r.scan.machine;
       r.scan.machine=advanceScanState(previous,now/1000,good);
       const machine=r.scan.machine;
-      setState(machine.state);setProgress(machine.goodElapsed/SCAN_SECONDS);setPaused(machine.paused);
+      setState(machine.state);setProgress(machine.elapsed/SCAN_SECONDS);setPaused(machine.paused);
       setHint(machine.paused?specificHint:machine.state==='positioning'?(good?'Hold still':'Fit your face in the circle'):specificHint);
 
       if(previous.state==='countdown'||machine.state==='countdown'||machine.state==='analyzing'){
-        const observation=r.scan.index.update(Math.min(machine.goodElapsed,SCAN_SECONDS-.000001),xy,pose,good,{brightness,qualityReason:specificHint,qualityFlags:flags});
+        r.scan.captureStart??=v.currentTime;
+        r.scan.elapsed=v.currentTime-r.scan.captureStart;
+        const observation=r.scan.index.update(r.scan.elapsed,xy,pose,good,{brightness,qualityReason:specificHint,qualityFlags:flags});
         r.scan.total++;if(observation.valid)r.scan.valid++;
       }
 
@@ -159,7 +161,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     }catch(error){if(!isCurrent())return;stop();setState('failed');setError(cameraError(error));}
   }
 
-  const view={state,error,hint,progress,paused,extended,secondsRemaining:Math.max(0,Math.ceil((extended?TOLERANCE_CONFIG.maxDuration:SCAN_SECONDS)*(1-progress))),videoRef:video,overlayRef:overlay,start,cancel,active:['permission','loading','positioning','countdown','analyzing'].includes(state),hardCap:tolerant?TOLERANCE_CONFIG.maxDuration:HARD_CAP_SECONDS,calibrating};
+  const view={state,error,hint,progress,paused,extended,tolerant,secondsRemaining:Math.max(0,Math.ceil((extended?TOLERANCE_CONFIG.maxDuration:SCAN_SECONDS)*(1-progress))),videoRef:video,overlayRef:overlay,start,cancel,active:['permission','loading','positioning','countdown','analyzing'].includes(state),hardCap:tolerant?TOLERANCE_CONFIG.maxDuration:HARD_CAP_SECONDS,calibrating};
   if(render)return render(view);
   return <section><h1>{calibrating?'Calibrate when calm':'Calm index scan'}</h1><video ref={video} autoPlay playsInline muted/><canvas ref={overlay}/><p aria-live="polite">{error||hint}</p>{!view.active?<button onClick={start}>Start 10-second scan</button>:<button onClick={cancel}>Cancel</button>}</section>;
 }

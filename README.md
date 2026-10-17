@@ -14,6 +14,8 @@ A browser-based facial check-in with a light interface, a short camera scan, and
 
 The live site deploys from `main` after browser and offline checks pass. The provisional tolerant acquisition policy remains opt-in; deployment does not enable it by default.
 
+See the [release-readiness record](docs/RELEASE_READINESS.md) for implemented safeguards, actual checks and remaining validation requirements.
+
 ## The experience
 
 - Start a short scan with explicit camera permission.
@@ -23,6 +25,10 @@ The live site deploys from `main` after browser and offline checks pass. The pro
 - Optionally calibrate when calm for a personal reference; reset it in Settings.
 
 The interface uses responsive layouts, accessible focus states, gentle motion, and a reduced-motion alternative. The PWA can initialize a scan offline after its app and model assets have been cached.
+
+Standard mode captures a fixed ten seconds after positioning; rejected frames and dropped frames stay missing on the actual capture clock. Camera/model setup takes additional time, with a 25-second cap after initialization if positioning or capture cannot finish. Experimental tolerant mode is visibly labeled and may extend capture to twenty seconds.
+
+History separates algorithms, acquisition versions, and personal-baseline identities instead of connecting incompatible results. Damaged records are skipped safely; explicit recovery backs up the original data in this browser before retaining valid scans. Recovery backups can be removed separately in Settings. Older personalized scans without baseline identity remain separate.
 
 ## Get started
 
@@ -82,13 +88,23 @@ Run from `frontend/`:
 ```sh
 npm test                       # Fast unit tests
 npm run build                 # Production build and PWA assets
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:e2e              # Browser flows, accessibility, responsive checks
+npm run test:webkit           # Safari-engine UI regressions, not real iPhone camera validation
 npm run test:offline          # Production-only offline test
 npm run test:lighthouse       # Local mobile audit
 ```
 
-The latest UI verification passed **37 frontend unit tests**, **10 main browser checks**, and the production build. The tolerance extension separately passed its two browser checks and JavaScript/Python parity within `1e-6`. These software checks do not establish prediction accuracy.
+Release checks cover capture-clock gaps, calibration navigation, damaged-storage recovery, reference-separated trends, camera cleanup, accessibility, small screens and offline model initialization. JavaScript/Python parity includes rejected and dropped capture frames within `1e-6`. These software checks do not establish prediction accuracy or human repeatability; real Safari/iPhone camera validation remains a manual check.
+
+The historical API is deliberately local-only, including client/Host/Origin checks, 64 KiB request limits, per-process rate limits, bounded session pagination and explicit SQLite connection cleanup. It has no accounts or multi-user ownership and must not be placed behind a public reverse proxy. Public multi-user backend hosting requires separate authentication, ownership and deployment work; it is not needed for this static product. Run its isolated tests with:
+
+```sh
+cd backend
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-test.txt
+.venv/bin/python -m unittest discover -s . -p 'test_*.py' -v
+```
 
 For offline research, use Python 3.11 or 3.12 from the repository root:
 

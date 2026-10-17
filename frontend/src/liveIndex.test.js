@@ -65,7 +65,7 @@ test('column-major pose matrix extracts yaw and rejects missing matrices',()=>{
 test('camera sessions use separate storage and preserve old questionnaire records',()=>{
   const values=new Map([['pause-checkins-v1','[{"self_reported_stress":8}]']]);
   globalThis.localStorage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
-  const session={id:'synthetic-test',points:[{time:25,value:5}]};
+  const session={id:'synthetic-test',created_at:'2026-01-01T00:00:00Z',average:5,points:[{time:25,value:5}]};
   saveCameraSession(session);saveCameraSession(session);
   assert.equal(readCameraSessions().length,1);
   deleteCameraSession(session.id);assert.equal(readCameraSessions().length,0);

@@ -217,6 +217,8 @@ Outputs: `results/metrics.json`, `results/summary.md`, `results/comparison.md`, 
 
 The browser quick scan uses a fixed generic reference; it does not calibrate against the participant. `deployed_mirror.py` ports its face geometry, acquisition checks, per-window index and scan reliability rules. The parity test invokes Node against the JavaScript source and compares a deterministic fixture derived from the same canonical-reference construction used in `frontend/src/liveIndex.test.js`:
 
+The capture-clock release also tests rejected gaps and dropped frames at their original timestamps. Standard browser scoring now uses elapsed video time, rather than accumulating only accepted time; a ten-second capture does not squeeze rejected intervals away. Formula and acceptance thresholds are unchanged. Historical records are separated by acquisition version in the browser. Generic D0 evaluation remains task-based evidence, not clinical validation; personalized D1 does not validate D0.
+
 ```sh
 stress_math/.venv/bin/python -m unittest stress_math.test_deployed_mirror -v
 ```

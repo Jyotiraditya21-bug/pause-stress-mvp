@@ -2,7 +2,7 @@ name: Checks
 
 on:
   push:
-    branches: [prod-hardening]
+    branches: [main, prod-hardening]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -15,6 +15,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  backend:
+    name: Local API boundary and persistence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-test.txt
+        working-directory: backend
+      - run: python -m unittest discover -s . -p 'test_*.py' -v
+        working-directory: backend
   frontend:
     name: Frontend tests and build
     runs-on: ubuntu-latest
