@@ -24,6 +24,8 @@ Pause is a static, on-device experimental facial check-in. GitHub Pages serves t
 
 ## Evidence still required
 
+PR [#2](https://github.com/Jyotiraditya21-bug/pause-stress-mvp/pull/2) merged as `f8307b3`. Pages [run 39015870990](https://github.com/Jyotiraditya21-bug/pause-stress-mvp/actions/runs/39015870990) passed Lighthouse, Chromium/WebKit/offline gates and deployment. Public smoke verification confirmed the new UI, HTTP 200 for model/WASM/PWA assets, no page errors/serious accessibility violations/mobile overflow, and fake-camera initialization/cancellation with all tracks ended.
+
 Automated WebKit checks do not replace camera permission, interruptions, thermal performance and camera rendering tests on physical Safari/iPhone devices. Repeatability, nuisance sensitivity, participant-separated task discrimination and skin-tone/lighting effects remain unestablished without real participant evaluation. Keep all accuracy and clinical claims disabled. Do not interpret limited-confidence ranges as statistical confidence in a person's stress level.
 
 Before expanding beyond the experimental static MVP, collect consented repeat sessions and run the existing fixed evaluation protocols. Do not tune the formula on the held-out evaluation data or force scans to match a previous score.

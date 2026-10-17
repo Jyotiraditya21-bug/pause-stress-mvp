@@ -319,7 +319,7 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Update Results presentation and consolidate actions around Save this result, Scan again and optional calibration. Preserve every score, acquisition rule and camera lifecycle behavior.
 - [x] Refine narrow/short mobile layouts; visually confirm the start button fits at 360×640 and light colors remain active under a dark system preference.
 - [x] Verification: 37 frontend unit tests passed, production PWA build passed, and all 10 main Playwright checks passed, including Scan/Result/History axe checks and four viewport overflow checks. Desktop, phone and Results screenshots inspected. No scoring or Python research changes; no new dependencies.
-- [x] Local development server remains available at `http://127.0.0.1:5173/?tolerance=1`. This UI revision has not been deployed to GitHub Pages.
+- [x] Local development server remains available at `http://127.0.0.1:5173/?tolerance=1`. This UI revision was subsequently deployed with the October 17 release.
 
 ## Repository presentation — 2026-10-15
 
@@ -340,23 +340,24 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Include the larger light UI, feature/non-diagnostic copy, subtle reduced-motion animations and experimental mode/duration labeling.
 - [x] Enforce the historical backend's local-only boundary; add body/rate limits and pagination, fix SQLite connection leaks, and add explicit backend CI. Public multi-user backend hosting remains out of scope for the static product.
 - [x] Verify 40 unit tests, production build, 18 Chromium checks, 6 WebKit UI checks, offline PWA, 9 backend tests and strict/tolerant parity. Production npm audit: zero known advisories. See docs/RELEASE_READINESS.md for physical-device and participant-evaluation gaps.
+- [x] Merge PR #2 as `f8307b3`; Pages run `39015870990` passed Lighthouse, Chromium, WebKit, offline and deployment jobs. Public smoke check confirmed HTTP 200, no page errors/serious accessibility violations/overflow, successful model/WASM/PWA requests and fake-camera initialization/cancellation with all tracks stopped.
 
 ### Product review — 2026-10-17 (review only)
 
 - [x] Recheck production build, 37 frontend tests, 5 isolated backend tests, 12 Chromium browser checks and the separate offline PWA test; all passed. No real-camera accuracy/repeatability or Safari validation performed.
-- [ ] Standard acquisition feeds accumulated goodElapsed into scoring; preserve real capture gaps and verify deployed/offline timing parity before changing it.
-- [ ] Reset calibration intent on ordinary navigation: reproduced Settings → calibration → History → Scan retaining calibration mode.
-- [ ] Validate each saved history record and offer recovery: synthetic `[null]` storage reproduces the app-wide error screen.
-- [ ] Separate history trends by algorithm/reference/baseline identity; current graph combines them and equally spaces dates.
-- [ ] Show experimental tolerance mode and realistic scan duration explicitly; current advertised 10 s can extend to 20 s (tolerant) or 25 s (standard cap).
-- [ ] Keep historical FastAPI backend local-only; add authentication, session ownership, pagination and request limits before any public backend deployment. Add backend tests explicitly to CI.
-- [ ] Validate participant repeatability and device/browser behavior before making accuracy claims. Latest UI refinement remains local and undeployed.
+- [x] Replace accumulated-good-time scoring with capture timestamps and verify gap-aware deployed/offline parity.
+- [x] Reset calibration intent on ordinary navigation; add a regression for Settings → calibration → History → Scan.
+- [x] Validate saved history records and offer recovery; add a regression for synthetic `[null]` alongside a valid record.
+- [x] Separate history trends by algorithm/reference/baseline identity and use date spacing.
+- [x] Show experimental tolerance mode and realistic duration explicitly.
+- [x] Keep historical FastAPI local-only, add pagination/request limits and backend CI. Any future public multi-user API still requires authentication and session ownership; it is not part of this static deployment.
+- [ ] Validate participant repeatability and physical-device camera behavior before making accuracy claims. Automated WebKit UI checks passed; they are not physical Safari/iPhone camera validation.
 
 ### Subsequent UI refinement (local preview)
 
 - [x] Enlarge desktop content and circular preview by about 10%, retaining the palette and layout. Add a compact feature row and explicit non-diagnostic description.
 - [x] Add subtle chip pulse, staggered feature entrances, button-arrow hover and active-card emphasis, respecting reduced motion.
-- [x] Production build and 12 browser checks passed (one offline-only test intentionally skipped in this suite); desktop screenshot inspected. No scoring changes. This refinement has not yet been deployed.
+- [x] Production build and 12 browser checks passed (one offline-only test intentionally skipped in this suite); desktop screenshot inspected. This UI refinement was subsequently included in the October 17 deployed hardening release.
 
 - [x] Confirm no open GitHub issues; resolve PR #1 conflicts with the earlier main-branch UI revert, preserving the latest light interface and research code.
 - [x] Require browser and offline checks before the Pages deployment job; update README for main-based releases.
