@@ -78,10 +78,10 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .scan-ring .scan-ring-fill { stroke: #629655; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--progress)); transition: stroke-dashoffset 250ms linear,opacity .2s; }
 .scan-circle.is-paused .scan-ring-fill { opacity: .35; }
 .scan-circle.is-loading .scan-ring-fill { stroke-dasharray: .16 .84; animation: ring-spin 1.8s linear infinite; transform-origin: center; }
-.scan-camera { position: absolute; inset: 16px; border-radius: 50%; overflow: hidden; background: #edf3e8; }
-.scan-camera video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 50%; background: #edf3e8; opacity: 0; transition: opacity .15s ease-out; }
+.scan-camera { position: absolute; inset: 16px; border-radius: 50%; overflow: hidden; background: #edf3e8; filter: none !important; backdrop-filter: none !important; -webkit-filter: none !important; }
+.scan-camera video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 50%; background: transparent; filter: none !important; backdrop-filter: none !important; -webkit-filter: none !important; opacity: 0; transition: opacity .15s ease-out; }
 .scan-camera video.is-ready { opacity: 1; }
-.scan-camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 50%; background: transparent; pointer-events: none; }
+.scan-camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); border-radius: 50%; background: transparent; filter: none !important; backdrop-filter: none !important; -webkit-filter: none !important; pointer-events: none; }
 .face-guide-overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
 .face-guide-svg { width: 100%; height: 100%; }
 .guide-oval { fill: none; stroke: #9ec594; stroke-width: 2; stroke-dasharray: 6 6; opacity: .75; }

@@ -516,3 +516,12 @@ This audit supersedes the unqualified historical claims above that all training/
 - [x] Add training/SYSTEM_AND_TRAINING_DETAILS.md and link it prominently from PRODUCTION_READINESS.md. Verify exact geometry, reference/sigma/sigmoid/window pipeline and distinguish it from optional MobileNet inference.
 - [x] Document actual executed architecture/parameter counts, splits,15/5epoch training settings, augmentation, optimizer/loss/LRs, winning checkpoint, BN-buffer caveat, training RNG/resumption gaps and validation/test provenance.
 - [x] Document live neural EMA/sample-window/cropping differences and absence of physiological validation. No scoring/training/data changes.
+
+### Fast camera startup & raw background preservation — 2026-10-20
+
+- [x] Decouple camera stream attachment from MediaPipe model promise in `CameraScan.jsx`. `video.current.srcObject` is mounted and played as soon as `getUserMedia` returns (~150ms).
+- [x] Added `oncanplay`, `onloadeddata`, `onplaying` listeners to activate video element instantly without waiting for model load.
+- [x] Added hover/focus/touch model preloading on "Start 10-second scan" button in `ScanScreen.jsx`.
+- [x] Enforced `filter: none !important; backdrop-filter: none !important; -webkit-filter: none !important; background: transparent;` on `.scan-camera`, `video`, and `canvas` in `pause-ui.css`. Raw video pixels are never modified.
+- [x] Added helpful advisory tip regarding macOS system "Studio Light" video effects in menu bar, explaining why backgrounds can appear blacked out on Macs and how to restore natural room backdrops.
+- [x] 60 frontend unit tests, 18 Playwright E2E tests, and production build passed.

@@ -1,5 +1,5 @@
 import React from 'react';
-import CameraScan from '../CameraScan.jsx';
+import CameraScan, { preloadLandmarker } from '../CameraScan.jsx';
 import Icon from './Icon.jsx';
 
 function getRecoveryAction(errorMessage) {
@@ -117,14 +117,23 @@ export default function ScanScreen({onComplete,baseline,calibrating=false}) {
             </p>
 
             {!active && (
-              <button className="pz-btn pz-btn-primary scan-primary" onClick={start}>
+              <button
+                className="pz-btn pz-btn-primary scan-primary"
+                onClick={start}
+                onMouseEnter={() => preloadLandmarker?.().catch(() => {})}
+                onTouchStart={() => preloadLandmarker?.().catch(() => {})}
+                onFocus={() => preloadLandmarker?.().catch(() => {})}
+              >
                 {calibrating ? 'Start calm calibration' : 'Start 10-second scan'}<Icon name="arrow"/>
               </button>
             )}
             {active && state!=='analyzing' && (
               <button className="scan-cancel" onClick={cancel}>Cancel</button>
             )}
-            <p className="scan-card-footnote"><Icon name="shield" size={15}/>Private by design. Camera off when you finish.</p>
+            <p className="scan-card-footnote">
+              <Icon name="shield" size={15}/>
+              <span>Raw on-device feed. If your room background looks black or blurred, turn off Mac <strong>Studio Light</strong> in your top menu bar.</span>
+            </p>
           </>
         )}
       </section>

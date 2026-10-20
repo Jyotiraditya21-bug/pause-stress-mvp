@@ -72,6 +72,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     r.stream?.getTracks().forEach(track=>track.stop());
     if(video.current){
       video.current.srcObject=null;
+      video.current.oncanplay=null;
       video.current.onloadeddata=null;
       video.current.onplaying=null;
     }
@@ -219,21 +220,27 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     const r=runtime.current;r.starting=true;const isCurrent=()=>mounted.current&&runtime.current===r;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera access. Use an up-to-date browser on HTTPS.');
-      const streamPromise = awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(track=>track.stop()),message:'Camera permission is still pending. Allow camera access, then start again.'});
+      const streamPromise = awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:30,max:30}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(track=>track.stop()),message:'Camera permission is still pending. Allow camera access, then start again.'});
       const modelPromise = loadLandmarker(isCurrent);
 
-      const [stream, model] = await Promise.all([streamPromise, modelPromise]);
+      const stream = await streamPromise;
       if(!isCurrent())return;
       r.stream=stream;
-      r.model=model;
-      setState('loading');
       r.stream.getVideoTracks().forEach(track=>track.addEventListener('ended',()=>{if(isCurrent()){stop();setState('failed');setError('The camera disconnected. Reconnect it, then start again.');}}));
       if(video.current){
         video.current.srcObject=r.stream;
+        video.current.oncanplay=()=>{if(runtime.current===r)setVideoReady(true);};
         video.current.onloadeddata=()=>{if(runtime.current===r)setVideoReady(true);};
         video.current.onplaying=()=>{if(runtime.current===r)setVideoReady(true);};
+        if(video.current.readyState>=2)setVideoReady(true);
         try{await video.current.play();}catch{}
       }
+      setState('loading');
+      setHint('Loading facial analysis…');
+
+      const model = await modelPromise;
+      if(!isCurrent())return;
+      r.model=model;
       if(!isCurrent())return;
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
       const enableML=new URLSearchParams(location.search).get('ml')==='1'||localStorage.getItem('pause.ml.enabled')==='1';
