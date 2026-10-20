@@ -1,3 +1,4 @@
+import GuidedStudy from './components/GuidedStudy.jsx';
 import React,{Suspense,lazy,useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import './pause-ui.css';
@@ -23,18 +24,20 @@ function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline
   const flags=Object.entries(result.qualityFlags||{}).filter(([,value])=>value).map(([key])=>key);
   const usable=result.status!=='failed'&&Number.isFinite(result.average);
   const caption=usable&&<div className="result-caption">
+      {result.acceptancePolicy&&<p className="mode-line">Prospective acquisition policy · experimental, not validated</p>}
       <p className="mode-line">{result.mode==='baseline'?'Compared with your calm baseline':result.mode==='calibration'?'Calm baseline saved':'Compared with a fixed generic face reference'}</p>
-      {result.range&&<p className="range-line">Likely scan range: {result.range[0].toFixed(1)}–{result.range[1].toFixed(1)}</p>}
+      {result.range&&<p className="range-line">Within-scan variation: {result.range[0].toFixed(1)}–{result.range[1].toFixed(1)} · not a confidence interval</p>}
     </div>;
   const actions=usable&&<>
       <button className="pz-btn pz-btn-primary" onClick={onSave} disabled={isSaved}>{isSaved?'Result saved':'Save this result'}</button>
       <button className="pz-btn pz-btn-quiet" onClick={onRetry}>Scan again</button>
       <button className="calibrate-link" onClick={onCalibrate}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>
     </>;
-  return <section className="result-screen"><h1>Calm index result</h1><ResultCard status={result.status||result.quality} score={result.average} windows={result.windowScores||result.points?.map(p=>p.value)||[]} reason={result.failReason||result.reason} warnings={result.warnings||[]} onRetry={onRetry} onDone={onDone} caption={caption} actions={actions}>
+  return <section className="result-screen"><h1>Calm index result</h1><ResultCard status={result.status||result.quality} score={result.average} windows={result.windowScores||result.points?.map(p=>p.value)||[]} reason={result.failReason||result.reason} warnings={result.warnings||[]} consensusMask={result.consensusWindowMask??result.windowDiagnostics?.windows?.map(w=>w.inConsensus)} coverageDetails={result.coverageDetails} onRetry={onRetry} onDone={onDone} caption={caption} actions={actions}>
     {usable&&
-      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd>{result.mlResult&&<><dt>Experimental Neural Score</dt><dd>{(result.mlResult.averageStressProbability*100).toFixed(1)}% stress probability ({result.mlResult.classification})</dd></>}<dt>Coverage</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd>{result.tier&&<><dt>Tier</dt><dd>{result.tier}</dd><dt>Confidence</dt><dd>{result.confidence.toFixed(2)}</dd><dt>Features per window</dt><dd>{result.windowFeaturesUsed.join(', ')}</dd></>}</dl></details>
+      <details className="pz-panel details"><summary>Details</summary><dl><dt>Mode</dt><dd>{result.mode}</dd><dt>Algorithm</dt><dd>{result.algoVersion}</dd>{result.mlResult&&<><dt>Experimental dataset-class output</dt><dd>{(result.mlResult.averageStressProbability*100).toFixed(1)}% for the stress class (dataset label: {result.mlResult.classification}); not a calibrated probability of your stress</dd></>}<dt>{result.coverageDetails?"Time-slot occupancy":"Legacy coverage (denominator not recorded)"}</dt><dd>{Number(result.coveragePercent||0).toFixed(0)}%</dd><dt>Quality flags</dt><dd>{flags.length?flags.join(', '):'None'}</dd>{result.tier&&<><dt>Tier</dt><dd>{result.tier}</dd><dt>Confidence</dt><dd>{result.confidence.toFixed(2)}</dd><dt>Features per window</dt><dd>{result.windowFeaturesUsed.join(', ')}</dd></>}</dl></details>
     }
+    {new URLSearchParams(location.search).get('diagnostics')==='1'&&<details className="pz-panel details"><summary>Technical scan diagnostics</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{JSON.stringify({id:result.id,created_at:result.created_at,mode:result.mode,algoVersion:result.algoVersion,source:result.source,acquisitionVersion:result.acquisitionVersion,acceptancePolicy:result.acceptancePolicy,average:result.average,range:result.range,status:result.status,reason:result.reason,warnings:result.warnings,coveragePercent:result.coveragePercent,coverageDetails:result.coverageDetails,consensusWindowMask:result.consensusWindowMask,windowScores:result.windowScores,features:result.features,featureStats:result.featureStats,windowDiagnostics:result.windowDiagnostics??{status:"Not captured for this scan; detailed windows require a new standard scan with diagnostics=1."},reliability:result.reliability,mlResult:result.mlResult},null,2)}</pre></details>}
   </ResultCard></section>;
 }
 
@@ -76,6 +79,7 @@ function App(){
     <header className="site-header"><button className="brand" onClick={()=>navigate('Scan')} aria-label="Pause home"><span className="brand-mark" aria-hidden="true"><i/><i/></span>pause</button><nav className="main-nav" aria-label="Primary"><button aria-current={screen==='Scan'?'page':undefined} onClick={()=>navigate('Scan')}><Icon name="scan" size={17}/>Scan</button><button aria-current={screen==='History'?'page':undefined} onClick={()=>navigate('History')}><Icon name="history" size={17}/>History</button>{lab&&<button aria-current={screen==='Lab'?'page':undefined} onClick={()=>navigate('Lab')}>Lab</button>}</nav></header>
     {notice&&<p className="notice" role="status">{notice}</p>}{error&&<p className="error-banner" role="alert">{error}</p>}
     {(storageState.unreadable||storageState.invalidCount>0)&&<section className="notice" aria-label="History recovery"><p>Some saved history could not be read. Valid scans are still available. Recover history to back up the original data on this device and enable saving and deleting again.</p><button className="pz-btn pz-btn-quiet" onClick={recoverHistory}>Recover saved history</button></section>}
+    {new URLSearchParams(location.search).get('study')==='1'&&new URLSearchParams(location.search).get('policy')==='prospective-1'&&<GuidedStudy result={result} onStart={()=>navigate('Scan')}/>}
     <div className="app-content"><Suspense fallback={<main className="page"><p>Loading…</p></main>}>
       {screen==='Onboarding'&&<main className="page onboarding"><h1>A quiet moment to check in</h1><p>Pause gives you an experimental Calm index after a 10-second camera scan. Processing stays on your device, and the result cannot tell how stressed you feel.</p><button className="pz-btn pz-btn-primary" onClick={()=>{setOnboarded();navigate('Scan')}}>Continue to scan</button></main>}
       {screen==='Scan'&&<ScanScreen onComplete={complete} baseline={calibrating?null:baseline} calibrating={calibrating}/>} 

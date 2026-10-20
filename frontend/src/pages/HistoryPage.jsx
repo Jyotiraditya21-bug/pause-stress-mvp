@@ -1,6 +1,12 @@
 import React from 'react';
 import {groupCameraSessions,historyGroupKey} from '../cameraSessions.js';
 
+function exportHistory(sessions) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify({version: 1, exported_at: new Date().toISOString(), sessions}, null, 2)], {type: 'application/json'}));
+  const link = document.createElement('a'); link.href = url; link.download = 'pause-history.json'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function Trend({sessions}){
   const rows=[...sessions].filter(s=>Number.isFinite(s.average)).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   if(!rows.length)return null;
@@ -9,9 +15,24 @@ function Trend({sessions}){
 }
 
 export default function HistoryPage({sessions,onView,onDelete,onScan}){
-  return <main className="page history-page"><h1>History</h1>{!sessions.length?<section className="empty-state"><p>No saved scans yet. Run a scan and save it to see your trend.</p><button className="pz-btn pz-btn-primary" onClick={onScan}>Start 10-second scan</button></section>:<>
-    <p className="mode-line">Trends only connect scans with the same algorithm and reference. Calibration scans are listed below separately.</p>
-    {groupCameraSessions(sessions).map((rows,i)=><section className="pz-panel" key={historyGroupKey(rows[0])}><h2>{rows[0].mode==='baseline'?'Personal baseline':'Generic reference'} trend {i+1}</h2><p>{rows[0].acquisitionVersion==='legacy'?'Earlier scan method':rows[0].source.includes('tolerant')?'Movement-tolerant scan':'Standard scan'} · {rows[0].mode==='baseline'?(rows[0].baselineId?'Same saved personal reference':'Baseline identity unavailable; shown separately'):'Same generic face reference'}</p><Trend sessions={rows}/></section>)}
-    <ul className="history-list">{sessions.map(session=><li key={session.id}><button className="history-view" onClick={()=>onView(session)}><strong>{Number.isFinite(session.average)?`${session.average.toFixed(1)} /10`:'Incomplete scan'}</strong><span>{new Date(session.created_at).toLocaleString()} · {session.mode==='calibration'?'Baseline calibration':session.mode==='baseline'?'vs. your baseline':'vs. generic reference'}</span></button><button className="pz-btn pz-btn-quiet" onClick={()=>onDelete(session.id)} aria-label={`Delete scan from ${new Date(session.created_at).toLocaleString()}`}>Delete</button></li>)}</ul>
-  </>}</main>;
+  return <main className="page history-page">
+    <div className="history-header">
+      <h1>History</h1>
+      {sessions.length > 0 && (
+        <button className="pz-btn pz-btn-quiet export-btn" onClick={()=>exportHistory(sessions)}>Export saved results</button>
+      )}
+    </div>
+    {!sessions.length ? (
+      <section className="empty-state">
+        <p>No saved scans yet. Run a scan and save it to see your trend.</p>
+        <button className="pz-btn pz-btn-primary" onClick={onScan}>Start 10-second scan</button>
+      </section>
+    ) : (
+      <>
+        <p className="mode-line">Trends only connect scans with the same algorithm and reference. Calibration scans are listed below separately.</p>
+        {groupCameraSessions(sessions).map((rows,i)=><section className="pz-panel" key={historyGroupKey(rows[0])}><h2>{rows[0].mode==='baseline'?'Personal baseline':'Generic reference'} trend {i+1}</h2><p>{rows[0].acquisitionVersion==='capture-clock-prospective-1'?'Prospective standard scan (unvalidated)':rows[0].acquisitionVersion==='legacy'?'Earlier scan method':rows[0].source.includes('tolerant')?'Movement-tolerant scan':'Standard scan'} · {rows[0].mode==='baseline'?(rows[0].baselineId?'Same saved personal reference':'Baseline identity unavailable; shown separately'):'Same generic face reference'}</p><Trend sessions={rows}/></section>)}
+        <ul className="history-list">{sessions.map(session=><li key={session.id}><button className="history-view" onClick={()=>onView(session)}><strong>{Number.isFinite(session.average)?`${session.average.toFixed(1)} /10`:'Incomplete scan'}</strong><span>{new Date(session.created_at).toLocaleString()} · {session.mode==='calibration'?'Baseline calibration':session.mode==='baseline'?'vs. your baseline':'vs. generic reference'}</span></button><button className="pz-btn pz-btn-quiet" onClick={()=>onDelete(session.id)} aria-label={`Delete scan from ${new Date(session.created_at).toLocaleString()}`}>Delete</button></li>)}</ul>
+      </>
+    )}
+  </main>;
 }

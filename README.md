@@ -149,3 +149,23 @@ GitHub Pages deploys `frontend/dist` from `main`. Use `VITE_BASE=/pause-stress-m
 ## Licensing
 
 Third-party notices are preserved with their assets, including [MediaPipe notices](frontend/public/LICENSE.mediapipe). No project-wide license has been declared. Do not assume a permissive license for the application or optional model weights; [model licensing review remains pending](docs/VALIDATION_TODO.md).
+
+### Scan reporting limitations
+
+New standard scan results distinguish valid processed observations from time-slot occupancy. Counts exclude the first settling second and do not represent every camera frame. The displayed within-scan variation is robust dispersion, not a confidence interval or a between-session reliability estimate. Full observed window range and recorded consensus exclusions remain visible. Older results without these denominator fields are labeled unavailable; saved scores are not recomputed. Acceptance rules remain experimental; see [the consensus review](training/CONSENSUS_REVIEW.md).
+
+### Prospective acquisition study (local, opt-in)
+
+The default policy is preserved. The unvalidated candidate is available locally at `/?policy=prospective-1&tolerance=0&diagnostics=1&ml=1&study=1`. Its frozen engineering rules reject sparse-validity and terminal-change cases; they do not establish stress accuracy. See [the frozen policy](training/PROSPECTIVE_POLICY.md). Candidate records use a separate acquisition version in History.
+
+The guided panel requires an explicit **Begin new pair and save derived outcomes locally** action. This saves derived outcomes, including failures, to this browser; it never records/uploads camera media. Choose a pseudonym/task and obtain each participant's consent. Complete scan A, wait for the7-minute target (permitted interval5–10minutes), then complete scan B. Do not navigate away during capture. Off-protocol outcomes remain in the log. Reloading resumes the saved timer from timestamps. Download the derived study log after collection and keep it outside Git.
+
+```sh
+# Run from the repository root; install stress_math requirements in a virtual environment.
+python -m unittest stress_math.test_prospective_mirror stress_math.test_prospective_study
+python -m stress_math.evaluate_prospective_study /private/path/pause-local-study.json --output /private/path/new-study-report
+# With separately consented matched-clip nuisance scores:
+python -m stress_math.evaluate_prospective_study /private/path/pause-local-study.json --nuisance /private/path/nuisance.json --output /private/path/new-complete-report
+```
+
+The report generator checks both task AUCs, condition-specific repeatability, acceptance coverage and all six nuisance conditions. Undefined or insufficient evidence cannot PASS. It rejects mixed policy fingerprints and never fits model weights or thresholds. Logs are task-based labels, not clinical stress ground truth. Additional participants and controlled nuisance clips are required; one person's informal repeats do not validate this candidate.

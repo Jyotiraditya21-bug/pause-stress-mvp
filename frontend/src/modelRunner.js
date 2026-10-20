@@ -3,11 +3,15 @@
  * Loads the 3.84 MB MobileNetV3-Small ONNX model locally from public/models/pause_stress_model.onnx.
  * Preserves zero-server-upload privacy guarantee (runs 100% locally on device).
  */
-import * as ort from 'onnxruntime-web';
+import * as ort from 'onnxruntime-web/wasm';
+import wasmModuleUrl from 'onnxruntime-web/ort-wasm-simd-threaded.mjs?url';
+import wasmBinaryUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
 import { softmax, TemporalEMAFilter, MODEL_INPUT_SIZE } from './mlInference.js';
 
 let sessionPromise = null;
 let activeSession = null;
+let sessionGeneration = 0;
+let scanGeneration = 0;
 const emaFilter = new TemporalEMAFilter(0.20);
 
 /**
@@ -17,8 +21,12 @@ function configureEnvironment() {
   if (ort.env && ort.env.wasm) {
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.simd = true;
-    const base = import.meta.env.BASE_URL || '/';
-    ort.env.wasm.wasmPaths = base.endsWith('/') ? `${base}onnx/` : `${base}/onnx/`;
+    // Resolve assets from the installed package, including Vite's base path.
+    // The generic ORT entry point requests JSEP assets that are not shipped here.
+    ort.env.wasm.wasmPaths = {
+      mjs: new URL(wasmModuleUrl, window.location.href).href,
+      wasm: new URL(wasmBinaryUrl, window.location.href).href
+    };
   }
 }
 
@@ -30,6 +38,7 @@ export async function getModelSession() {
   if (activeSession) return activeSession;
   if (sessionPromise) return sessionPromise;
 
+  const generation = sessionGeneration;
   configureEnvironment();
 
   sessionPromise = (async () => {
@@ -40,10 +49,14 @@ export async function getModelSession() {
         executionProviders: ['wasm'],
         graphOptimizationLevel: 'all'
       });
+      if (generation !== sessionGeneration) {
+        await session.release();
+        throw new Error('Model initialization was cancelled.');
+      }
       activeSession = session;
       return session;
     } catch (err) {
-      sessionPromise = null;
+      if (generation === sessionGeneration) sessionPromise = null;
       throw new Error(`Failed to initialize on-device ML model: ${err?.message || err}`);
     }
   })();
@@ -57,30 +70,31 @@ export async function getModelSession() {
  * @returns {Promise<{ rawStressProb: number, smoothedStressProb: number, logits: number[] }>}
  */
 export async function predictFaceStress(nchwData) {
+  const generation = scanGeneration;
+  if (!(nchwData instanceof Float32Array) || nchwData.length !== 3 * MODEL_INPUT_SIZE ** 2 || !nchwData.every(Number.isFinite)) {
+    throw new Error('Invalid model input; no prediction is available.');
+  }
   const session = await getModelSession();
   const inputTensor = new ort.Tensor('float32', nchwData, [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
-
-  const feeds = { input: inputTensor };
-  const results = await session.run(feeds);
-
-  // Output name from model_spec is 'output'
-  const outputTensor = results.output || Object.values(results)[0];
-  const logits = Array.from(outputTensor.data);
-
-  const probs = softmax(logits);
-  const smoothed = emaFilter.update(probs.stress);
-
-  return {
-    rawStressProb: probs.stress,
-    smoothedStressProb: smoothed,
-    logits
-  };
+  let results;
+  try {
+    results = await session.run({ input: inputTensor });
+    if (generation !== scanGeneration) throw new Error('Scan prediction was cancelled.');
+    const outputTensor = results.output || Object.values(results)[0];
+    const logits = Array.from(outputTensor.data);
+    const probs = softmax(logits);
+    return { rawStressProb: probs.stress, smoothedStressProb: emaFilter.update(probs.stress), logits };
+  } finally {
+    inputTensor.dispose();
+    for (const tensor of Object.values(results || {})) tensor.dispose();
+  }
 }
 
 /**
  * Resets the temporal smoothing filter (call at the beginning of a scan).
  */
 export function resetMLScan() {
+  scanGeneration++;
   emaFilter.reset();
 }
 
@@ -88,6 +102,9 @@ export function resetMLScan() {
  * Releases the ONNX session from browser memory.
  */
 export async function disposeModelSession() {
+  sessionGeneration++;
+  scanGeneration++;
+  sessionPromise = null;
   if (activeSession) {
     try {
       await activeSession.release();

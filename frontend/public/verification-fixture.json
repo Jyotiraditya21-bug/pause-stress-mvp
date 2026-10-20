@@ -1,0 +1,1 @@
+{"model_sha256": "55a5cf41a63f71763127fc62e638975a7e35acf18d973c01591e1a658be36b5f", "logits": [-1.7001771926879883, 0.9047242999076843], "tolerance": 0.0001, "description": "Synthetic RGB ramp; inference parity only, not camera validation"}

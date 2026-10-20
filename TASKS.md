@@ -1,8 +1,26 @@
 # MVP task tracker
 
-Last updated: 2026-10-11
+Last updated: 2026-10-20
 
-## Current scope and status — 2026-10-11
+## Current scope and status — 2026-10-20: Experimental Facial Check-in MVP Release
+
+Completed engineering and release verification for the experimental facial check-in MVP across all 16 phases (0–15).
+Visual improvements focused across the 6 screens:
+- **Home**: Peaceful intro, 3 feature highlights (10s optical check-in, honest index & sparkline, 100% private on-device), and prominent non-diagnostic disclaimer.
+- **Camera setup**: Clean circular preview with subtle SVG face-position guide and actionable lighting/position feedback chips.
+- **Scanning**: Smooth animated progress ring, visible countdown badge, truthful status messages, real MediaPipe landmark dots, and no fake physiological animations.
+- **Results**: Clear score hierarchy (0–10 gauge readout, band badge, plain language note), acquisition status, within-scan variation, sparkline with explicit gaps and excluded outlier markers, and clear legend.
+- **History**: Strictly grouped compatible-session trends, timestamps, clean empty state, and JSON export/delete controls.
+- **Errors**: Friendly explanations, specific recovery instructions (browser permissions, camera-in-use, reconnect), and Try again / Cancel options.
+
+Verification:
+- 60 frontend unit tests pass (`node --test`)
+- Vite production PWA build succeeds cleanly
+- 18 Playwright Chromium E2E tests pass
+- 6 Playwright WebKit E2E tests pass
+- 1 Playwright offline PWA test passes
+- 9 FastAPI backend unit tests pass
+- Browser visual verification complete with zero console errors
 
 Current MVP: a deployed live experimental facial index, not an entered stress rating. The scale is reversed (0 high-stress end, 10 no-stress end), with baseline feature means at 5/10. Questionnaire/Gemini sections below document historical work; they are not the current browser flow. Training is outside the current scope. Datasets are test-only.
 
@@ -404,3 +422,97 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Recheck 37 frontend unit tests and production build successfully after restoring supporting UI pages.
 - [x] PR #1 merged as `590e66b`; Pages run `38776587447` passed browser/offline, Lighthouse and deployment jobs. Local browser suite: 12 passed plus the separate offline test; default-suite offline skip is intentional.
 - [x] Verify the public site at a 390×844 viewport: HTTP 200, expected scan heading/button, no horizontal overflow, no page errors or serious/critical axe violations. Model, WASM, manifest and service worker each return HTTP 200. These checks do not establish stress accuracy or real-camera repeatability.
+
+### Frozen-export verification — 2026-10-19
+
+This audit supersedes the unqualified historical claims above that all training/validation phases were verified.
+
+- [x] Verify frozen split/image checksums and exact decoded-ID separation.
+- [x] Evaluate existing ONNX on 2,464 designated test images without fitting: AUC 0.79379 [0.77708, 0.81173], accuracy 71.185%; image bootstrap only, subject IDs unknown.
+- [x] Add reproducible frozen-export evaluation and AUC-direction/tie/bootstrap tests; private predictions and lock retained outside Git.
+- [x] Fix ONNX browser WASM asset loading; native/browser synthetic inference max logit difference 3.34e-6 (<1e-4).
+- [x] Freeze prospective participant/repeatability/nuisance protocol in training/VERIFICATION.md.
+- [x] Retrieve 24 original Drive artifacts and executed notebook automatically. Verify chosen Phase 4 head/backbone exact equality, dataset fingerprint, app/Drive ONNX equality and reproduce validation metrics. Historical untouched-holdout status remains unknown.
+- [x] Verify original PyTorch/ONNX/TorchScript tensor parity on 20 seed-42 inputs (max ONNX logit error 6.38e-6; TorchScript zero); native/browser synthetic input passes.
+- [ ] Full live face-crop/resampling parity and domain validation; offline Resize256/CenterCrop224 differs from live padded face crop resized to224.
+- [ ] Collect consented real 10-second clips/repeats and run subject-level discrimination/nuisance/repeatability evaluation. Previous still-image EMA sequence is not real-video evidence.
+- [ ] Release decision after all prospective gates; no deployment performed in this audit.
+
+### Original Colab artifact follow-up — 2026-10-19
+
+- [x] Confirm real saved training: 15 head epochs, 5 fine-tune epochs; selected Phase 4 validation balanced accuracy 74.2522%, AUC 0.8125279.
+- [x] Confirm actual saved temporal_gate_pass=false. Still-image jitter report is not live-video validation; final completion banner ignored the failed criterion.
+- [x] Preserve original notebook, artifacts and checksums outside Git; no retraining or re-export.
+- [ ] Full training resumption provenance: executed notebook saved best state dicts without optimizer/RNG/batch state; original proposed epoch counts were changed. Exact mid-epoch continuation cannot be certified retroactively.
+- [x] Follow-up: original checkpoint/ONNX/TorchScript parity verified and local validation reproduction agrees with original Colab metrics. Add inference-only checkpoint verifier.
+- [ ] Real participant pilot attempted with explicit consent; no usable session collected. Private derived outcomes kept outside Git, no raw video/images/landmarks saved or uploaded. Clinical validity, repeatability and nuisance criteria remain unestablished.
+
+### Repeat-scan diagnostic inspection — 2026-10-19
+
+- [x] Add opt-in `?diagnostics=1` derived-data panel for existing saved results; no raw video/landmarks, no scoring or threshold changes. Read original saved feature/reliability summaries through that UI with prior participant consent; private values remain outside Git.
+- [x] Compare saved feature medians using the unchanged generic z-score formula. This is not exact per-window attribution. Fixed-reference geometry can differ substantially between scans even when each scan is internally stable.
+- [ ] Per-window raw feature rows and pose/brightness summaries were not persisted, so historical lighting/pose causes cannot be reconstructed. Prospective diagnostics are needed before changing the algorithm.
+
+### Prospective derived-window diagnostics — 2026-10-19
+
+- [x] Standard scans with `?diagnostics=1&tolerance=0` now retain nine per-window feature medians, raw window scores, consensus membership, usable-slot counts and pose/brightness median/p10/p90 summaries. Data covers usable slots only; rejected observations remain missing. No video, pixels, landmarks, score changes or gate changes.
+- [x] Diagnostic payload is removed from normal scan summaries unless explicitly enabled. User saving still uses the existing Save action; no new uploads or automatic storage. Failed results can display diagnostics without inventing a score.
+- [x] Existing saved results explicitly state that detailed windows were not captured. New data cannot be reconstructed for old scans; tolerant-mode details are not implemented by this standard-scan instrument.
+- [x] Add meaningful missingness/context/privacy regression test; existing scoring checks remain in place.
+
+### Consensus/confidence review — 2026-10-20
+
+- [x] Audit existing rules without tuning or changing scores. Synthetic terminal-change sequence returns9 and MAD range9–9 despite final windows6 and4; synthetic5% valid observations can yield100% occupied-slot coverage and good status.
+- [x] Document late-change filtering, coverage denominators, non-probabilistic MAD range, cross-session limitations, neural confidence terminology and hidden failed-result diagnostic children in training/CONSENSUS_REVIEW.md.
+- [ ] Implement transparently versioned diagnostic/terminology corrections and a prospectively defined policy; no acceptance threshold chosen from participant pilot results.
+
+### Reporting corrections Phase 1 — completed 2026-10-20
+
+- [x] Add observed/valid processed-observation counts after settling and explicit occupied-slot counts. Preserve legacy coveragePercent, score, consensus, thresholds and acquisition acceptance behavior unchanged. These counts are not all captured camera frames.
+- [x] Replace misleading confidence/range wording with acquisition status and within-scan variation (not a confidence interval). Show full observed window range and excluded window positions; outline exclusions on the existing chart.
+- [x] Use only explicitly stored membership for historical exclusions; mark missing legacy denominators as unavailable rather than reconstructing them. Preserve all saved scores.
+- [x] Render technical diagnostic children on failed results without a gauge or invented score. Normal Save remains unchanged.
+- [x] Verify 52 frontend tests and production build. New tests cover 5%-valid/100%-occupied separation, unchanged terminal-exclusion behavior, legacy missing/malformed data and failed-result diagnostic rendering. Browser-check existing saved result: unchanged score, full range and stored excluded windows correctly shown.
+- [ ] Phase 2: define and freeze revised acceptance/terminal-change policy before fresh evaluation. Reporting changes alone do not remedy sparse-validity acceptance or late-change exclusion.
+
+### Remaining phases — prospective candidate, 2026-10-20
+
+- [x] Phase2: freeze prospective-acquisition-1 engineering rules and SHA-256 before candidate evaluation; reuse existing quality tolerances with explicit per-slot/overall observation and unfiltered temporal gates. Old participant records are development evidence, not candidate holdout validation.
+- [x] Phase3 implementation: add opt-in prospective reliability class and separate Python mirror; preserve legacy module APIs/default policy, existing weights/scoring and saved results. Candidate capture version separates History groups. Candidate forces the standard10s path; no tolerant-mode adoption.
+- [x] Add cross-language synthetic acceptance/score fixtures, fixed-boundary/sparse/terminal/isolated-spike tests and timing/privacy checks. No fitting/tuning performed.
+- [x] Phase4 tooling: guided consented local paired study with7-minute target,5–10-minute timing checks, explicit condition/pseudonym and derived-outcome/failure logging; no raw media/uploads. Fresh participant collection is pending.
+- [x] Phase5 tooling: runnable policy-fingerprint-checked study analysis with subject AUC bootstrap, single-measure SD/SEM/MDC95, ICC bootstrap, task effects, coverage and nuisance gates. Empty/missing evidence is NOT ESTABLISHED/HOLD.
+- [ ] Browser verification: automatic approval review blocked opening localhost after detecting prior interruption; renewed authorization requested. No alternate browser or indirect workaround attempted.
+- [ ] Phase4 execution: fresh consented candidate participants, matched timed task pairs and controlled nuisance clips still needed. No fresh data or PASS claim invented.
+- [ ] Phase5 release: HOLD until prospective gates have sufficient real evidence; no deployment/adoption.
+
+### Authorized study-page verification — 2026-10-20
+
+- [x] User renewed localhost inspection authorization. Guided candidate page renders consent, task selector, pseudonym and controls correctly; no browser console errors. Screenshot retained privately. Camera not started and no study records created.
+- [ ] Active timer/recording browser flow and fresh participant collection still require an explicitly begun consented pair; timing/privacy helper logic is unit-tested. Earlier approval block no longer blocks initial page inspection.
+
+### First exported prospective study — 2026-10-20
+
+- [x] Analyse user-supplied derived study export locally and verify frozen policy fingerprints. One complete rest pair meets the5–10-minute interval; incomplete pair retained. Input snapshot/checksum and reports remain outside Git.
+- [ ] Broader candidate validation remains pending: one participant/rest pair cannot establish ICC, task discrimination or nuisance robustness. Actual evaluator returns NOT ESTABLISHED/HOLD; no deployment or tuning.
+
+### Final automated completion pass — 2026-10-20
+
+- [x] Consolidate current status and limitations in PRODUCTION_READINESS.md; supersedes earlier unqualified completion/production claims.
+- [x] Correct dataset-class and facial-index wording without changing numeric scores, gates, weights, or defaults.
+- [x] Fix evaluator's undocumented global incomplete-pair veto; preserve off-protocol records in coverage and exclude them from paired statistics. Synthetic positive/negative gate checks verify semantics; no real-data threshold tuning.
+- [x] Re-evaluate latest supplied study with the frozen fingerprint: NOT ESTABLISHED/HOLD. Private reports remain outside Git.
+- [x] Final verification: 59 frontend tests/build, four selected Python candidate/legacy/study tests, two metric tests, policy fingerprint and diff whitespace check pass.
+- [ ] Real multi-participant task/nuisance/repeatability validation remains pending; not replaced with simulations, inferred labels or fabricated measurements. Further informal participant retries are not requested in this pass.
+- [ ] Candidate adoption/validated product release remains HOLD. No push or deployment in this pass.
+
+### Plain-language performance report — 2026-10-20
+
+- [x] Expand PRODUCTION_READINESS.md with verified validation/test accuracy, balanced accuracy, ROC-AUC, precision, recall, F1, Brier score, confusion matrix, image-bootstrap intervals and plain-language interpretations.
+- [x] Explicitly separate dataset-label discrimination from the geometric Calm index, live acquisition coverage, repeatability and clinical stress validity. Include preprocessing, participant separation, historical holdout access and timing limitations. No new evaluation, training or scoring changes.
+
+### Detailed score/training explanation — 2026-10-20
+
+- [x] Add training/SYSTEM_AND_TRAINING_DETAILS.md and link it prominently from PRODUCTION_READINESS.md. Verify exact geometry, reference/sigma/sigmoid/window pipeline and distinguish it from optional MobileNet inference.
+- [x] Document actual executed architecture/parameter counts, splits,15/5epoch training settings, augmentation, optimizer/loss/LRs, winning checkpoint, BN-buffer caveat, training RNG/resumption gaps and validation/test provenance.
+- [x] Document live neural EMA/sample-window/cropping differences and absence of physiological validation. No scoring/training/data changes.

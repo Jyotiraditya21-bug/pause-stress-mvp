@@ -1,23 +1,23 @@
+from collections import deque
 from contextlib import asynccontextmanager, contextmanager
-from pathlib import Path
-import os
-import sqlite3
-import json
 from datetime import datetime, timezone
-from uuid import uuid4
+import ipaddress
+import json
+import os
+from pathlib import Path
+import sqlite3
+import threading
+import time
 from typing import Literal
-from pydantic import BaseModel, Field, ConfigDict
+from urllib.parse import urlsplit
+from uuid import uuid4
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Response
-from guidance import generate_guidance
-import threading
-import ipaddress
-import time
-from collections import deque
-from urllib.parse import urlsplit
-from fastapi import Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
+
+from guidance import generate_guidance
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / '.env')

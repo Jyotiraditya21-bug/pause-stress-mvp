@@ -18,7 +18,7 @@ Read TASKS.md for completed work, remaining tasks, and verification gaps. Update
 - backend/requirements.txt: Python dependencies.
 - backend/.env.example: configuration template only.
 
-Preserve the existing stack. Gemini is the chosen guidance provider. No trained stress predictor is enabled. The user authorized a browser port of the fixed, unvalidated mathematical facial index and removal of the questionnaire rating from the current UI. Keep its experimental status and personal-baseline interpretation explicit.
+Preserve the existing stack. Gemini is the chosen guidance provider. An optional, user-enabled experimental MobileNet image classifier is available. Its image-level test metrics do not validate live stress measurement. The user authorized a browser port of the fixed, unvalidated mathematical facial index and removal of the questionnaire rating from the current UI. Keep its experimental status and personal-baseline interpretation explicit.
 
 ## Product and scientific boundaries
 

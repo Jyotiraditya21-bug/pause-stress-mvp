@@ -59,7 +59,8 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
   const [progress,setProgress]=useState(0),[paused,setPaused]=useState(false);
   const [extended,setExtended]=useState(false);
   const [videoReady,setVideoReady]=useState(false);
-  const tolerant=TOLERANCE_CONFIG.adopted||new URLSearchParams(location.search).get('tolerance')!=='0';
+  const prospective=new URLSearchParams(location.search).get('policy')==='prospective-1';
+  const tolerant=!prospective&&(TOLERANCE_CONFIG.adopted||new URLSearchParams(location.search).get('tolerance')==='1');
   const video=useRef(null),overlay=useRef(null),runtime=useRef({}),mounted=useRef(true);
 
   function cancelLoop(r){
@@ -81,7 +82,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     setVideoReady(false);
     runtime.current={};
   }
-  function cancel(){stop();setState('idle');setProgress(0);setPaused(false);setHint('Center your face in view');}
+  function cancel(){stop();setState('idle');setProgress(0);setPaused(false);setHint('Center your face in view');setError('');}
 
   useEffect(()=>{
     mounted.current=true;
@@ -99,8 +100,9 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     const outcome=r.scan.index.finish(tolerant&&capped?TOLERANCE_CONFIG.maxDuration:r.scan.elapsed);
     const wall=(performance.now()-r.scan.wallStart)/1000;
     const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:tolerant?'quick-tolerant-index-v1':'quick-canonical-index-v3',...outcome,
-      status:outcome.status,mode:calibrating?'calibration':outcome.mode,baselineId:baseline?.id||baseline?.createdAt||null,acquisitionVersion:'capture-clock-1',frames:r.scan.total,validFrames:r.scan.valid,
+      status:outcome.status,mode:calibrating?'calibration':outcome.mode,baselineId:baseline?.id||baseline?.createdAt||null,acquisitionVersion:prospective?'capture-clock-prospective-1':'capture-clock-1',frames:r.scan.total,validFrames:r.scan.valid,
       durationSeconds:wall,capped,performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(wall,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
+    if(new URLSearchParams(location.search).get('diagnostics')!=='1')delete summary.windowDiagnostics;
     if(!tolerant&&capped&&summary.status==='ok'){
       summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
     }
@@ -249,7 +251,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
         }).catch(()=>{});
       }
       r.lastVideoTime=-1;r.lastRun=0;r.starting=false;
-      r.scan={wallStart:performance.now(),captureStart:null,elapsed:0,index:tolerant?new TolerantScan({baseline}):new QuickIndex({baseline,mode:baseline?'baseline':'generic'}),total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0,machine:createScanState(performance.now()/1000)};
+      r.scan={wallStart:performance.now(),captureStart:null,elapsed:0,index:tolerant?new TolerantScan({baseline}):new QuickIndex({baseline,mode:baseline?'baseline':'generic',policy:prospective?'prospective-1':'legacy'}),total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0,machine:createScanState(performance.now()/1000)};
       r.timer=setTimeout(()=>{if(runtime.current===r&&mounted.current)complete(true)},(tolerant?TOLERANCE_CONFIG.maxDuration:HARD_CAP_SECONDS)*1000);
       setState(tolerant?'countdown':'positioning');setHint('Center your face in view');schedule(r);
     }catch(error){if(!isCurrent())return;stop();setState('failed');setError(cameraError(error));}

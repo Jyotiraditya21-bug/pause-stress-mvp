@@ -1,4 +1,5 @@
 import {ScanReliability} from './scanReliability.js';
+import {ProspectiveReliability} from './prospectiveReliability.js';
 import canonical from './faceReference.json' with {type:'json'};
 import {ALGO_VERSION} from './baselineStorage.js';
 
@@ -114,7 +115,7 @@ export const SCAN_SECONDS=10;
 export const GENERIC_KEYS=Object.freeze(['brow_furrow','lip_press','lip_corner']);
 export const BASELINE_KEYS=Object.freeze([...GENERIC_KEYS,'jaw_clench']);
 export class QuickIndex {
-  constructor({baseline=null,mode=baseline?'baseline':'generic'}={}) {
+  constructor({baseline=null,mode=baseline?'baseline':'generic',policy='legacy'}={}) {
     const p=Array.from({length:478},()=>[0,0]);
     canonical.indices.forEach((i,n)=>{p[i]=[...canonical.reference[n]];});
     const g=geometry(p),row=Object.fromEntries(BASELINE_KEYS.map(k=>[k,g[k]]));
@@ -123,7 +124,7 @@ export class QuickIndex {
     this.keys=mode==='baseline'?BASELINE_KEYS:GENERIC_KEYS;
     this.reference=baseline ? null : [0,1,-1,.5,-.5].map(f=>Object.fromEntries(this.keys.map(k=>[k,row[k]+f*stds[k]])));
     this.baseline=baseline;
-    this.measurements=new ScanReliability(this.keys,r=>this.score(r),BASELINE_KEYS);
+    this.measurements=new (policy==='prospective-1'?ProspectiveReliability:ScanReliability)(this.keys,r=>this.score(r),BASELINE_KEYS);
     this.rejections={};
   }
   score(row) {

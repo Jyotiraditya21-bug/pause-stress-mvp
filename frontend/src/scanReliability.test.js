@@ -55,3 +55,43 @@ test('no face and severe disagreement still cannot produce a score',()=>{
   assert.equal(run({valid:()=>false}).average,null);
   assert.equal(run({signal:t=>Math.floor(t)%2?2:8}).average,null);
 });
+
+test('derived window diagnostics retain missingness and usable pose/light context',()=>{
+  const s=new ScanReliability(['x'],r=>r.x);
+  for(let i=10;i<100;i++){
+    const t=i/10;
+    s.add(t,t<2?null:{x:5},{pitch:2,yaw:3,brightness:120,landmarks:[1,2,3]});
+  }
+  const r=s.finish(),w=r.windowDiagnostics.windows;
+  assert.equal(w.length,9);
+  assert.equal(w[0].features,null);assert.equal(w[0].score,null);
+  assert.equal(w[0].acquisition.brightness,null);assert.equal(w[0].inConsensus,false);
+  assert.deepEqual(w[1].features,{x:5});assert.equal(w[1].usableSlots,5);
+  assert.equal(w[1].acquisition.yaw.median,3);
+  assert.equal(w[1].acquisition.brightness.median,120);
+  assert.equal(w[1].inConsensus,true);
+  assert.ok(!JSON.stringify(r.windowDiagnostics).includes('landmarks'));
+  assert.equal(r.average,5);
+});
+
+test('frame validity and slot occupancy have distinct denominators without changing scoring',()=>{
+  const s=new ScanReliability(['x'],r=>r.x);
+  for(let i=100;i<1000;i++)s.add(i/100,i%20===0?{x:5}:null);
+  const r=s.finish();
+  assert.equal(r.average,5);assert.equal(r.status,'ok'); // Acceptance is unchanged in Phase 1.
+  assert.equal(r.coveragePercent,100);
+  assert.equal(r.coverageDetails.observedFrames,900);
+  assert.equal(r.coverageDetails.validFrames,45);
+  assert.equal(r.coverageDetails.validFramePercent,5);
+  assert.equal(r.coverageDetails.timeSlotOccupancyPercent,100);
+});
+
+test('excluded terminal windows remain exposed while the fixed score is preserved',()=>{
+  const s=new ScanReliability(['x'],r=>r.x);
+  for(let i=10;i<100;i++)s.add(i/10,{x:i<80?9:i<90?6:4});
+  const r=s.finish();
+  assert.equal(r.average,9);assert.equal(r.status,'limited');
+  assert.deepEqual(r.consensusWindowMask,[true,true,true,true,true,true,true,false,false]);
+  assert.deepEqual(r.range,[9,9]);
+  assert.deepEqual(r.windowScores.slice(-2),[6,4]);
+});

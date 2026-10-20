@@ -1,0 +1,11 @@
+{
+  "version": "prospective-acquisition-1",
+  "minSlotValidFraction": 0.8,
+  "minObservationValidFraction": 0.8,
+  "minObservedSamples": 45,
+  "minSlotOccupancy": 0.8,
+  "minMeasuredWindows": 8,
+  "maxUnfilteredHalfDifference": 0.75,
+  "rejectExcludedTerminalPair": true,
+  "adopted": false
+}

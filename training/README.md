@@ -43,3 +43,11 @@ Open Pause_training.ipynb using Colab File → Upload notebook. Run installation
 extract.py samples videos in 30-second windows and writes resumable per-video checkpoints plus features.csv to Drive. Process one small batch at a time and retain the full manifest; completed files use checkpoints even if their temporary video was removed. Do not change source contents under an existing path without invalidating its checkpoint. Train after sufficient participants are processed, then download pause-model.zip.
 
 Notebook and scripts passed JSON/Python syntax checks only. Colab dependency installation, real-data extraction, browser/Python feature parity, runtime duration, and trained accuracy remain unverified. The current app has no learned stress predictor enabled.
+
+## Frozen image-model verification
+
+The earlier pipeline status above concerns the historical feature pipeline. For the separate `pause_faces_v1` image classifier, see [VERIFICATION.md](VERIFICATION.md) for the 2026-10-19 artifact audit, actual frozen-ONNX test results, runnable verification commands, manual Colab inputs and fixed prospective real-scan protocol. Historical “all phases complete” records do not establish live stress validity.
+
+## Prospective acquisition candidate
+
+See [PROSPECTIVE_POLICY.md](PROSPECTIVE_POLICY.md) for the frozen opt-in rules, unchanged legacy baseline and predeclared real-data protocol. The guided study and analysis commands are in the repository README. Candidate synthetic tests establish implementation behavior, not stress accuracy. Old participant scores are not new-policy validation data.

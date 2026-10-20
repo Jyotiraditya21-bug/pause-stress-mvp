@@ -1,11 +1,12 @@
 """Gemini chooses approved actions; no free-form diagnoses or invented scores."""
+from datetime import datetime, timezone
 import json
 import os
 import socket
+from typing import Literal
 import urllib.error
 import urllib.request
-from typing import Literal
-from datetime import datetime, timezone
+
 from pydantic import BaseModel, ConfigDict, Field
 
 ACTIONS = {

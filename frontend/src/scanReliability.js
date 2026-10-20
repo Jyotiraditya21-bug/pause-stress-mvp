@@ -20,7 +20,8 @@ export class ScanReliability {
     const slot=Math.min(44,Math.floor((time-SCAN_RULES.settling)/SCAN_RULES.slotSeconds+1e-8));
     for(const key of Object.keys(this.qualityFlags))this.qualityFlags[key] ||= !!context.qualityFlags?.[key];
     const samples=this.slots.get(slot)||[];
-    // Store invalid observations too: a brief good frame cannot bless a bad slot.
+    // Retain invalid observations for diagnostics. Legacy occupancy still accepts
+    // any slot containing a valid observation; this is not frame-validity coverage.
     samples.push(row&&this.keys.every(k=>Number.isFinite(row[k]))?{row,context}:null);
     this.slots.set(slot,samples);
     return true;
@@ -41,18 +42,27 @@ export class ScanReliability {
     return slots;
   }
   finish() {
-    const slots=this.usableSlots(),points=[],context=[],featureRows=[];
+    const slots=this.usableSlots(),points=[],context=[],featureRows=[],windowDiagnostics=[];
+    const observations=[...this.slots.values()].flat();
+    const validObservations=observations.filter(Boolean).length;
     for(let window=0;window<9;window++){
       const block=[];
       for(let i=window*5;i<(window+1)*5;i++)if(slots.has(i))block.push(slots.get(i));
-      let value=null;
+      let value=null,row=null;
       if(block.length>=2){
-        const row=Object.fromEntries(this.featureKeys.map(k=>[k,median(block.map(s=>s.row[k]).filter(Number.isFinite))]));
+        row=Object.fromEntries(this.featureKeys.map(k=>[k,median(block.map(s=>s.row[k]).filter(Number.isFinite))]));
         value=this.score({...row,time:window+1.5});
         featureRows.push(row);
       }
       context.push(...block.map(s=>s.context));
       points.push({time:window+1.5,value});
+      const acquisition={};
+      for(const key of ['pitch','yaw','brightness']){
+        const a=block.map(s=>s.context[key]).filter(Number.isFinite);
+        acquisition[key]=a.length?{median:median(a),p10:quantile(a,.1),p90:quantile(a,.9),slots:a.length}:null;
+      }
+      windowDiagnostics.push({start:window+1,end:window+2,time:window+1.5,
+        usableSlots:block.length,totalSlots:5,features:row,score:value,acquisition});
     }
     const values=points.map(p=>p.value).filter(Number.isFinite),coverage=slots.size/45;
     const first=points.slice(0,4).map(p=>p.value).filter(Number.isFinite);
@@ -64,6 +74,7 @@ export class ScanReliability {
     // The consensus uses only this scan; no previous score is reused.
     const centre=values.length?median(values):null;
     const consistent=points.filter(p=>Number.isFinite(p.value)&&Math.abs(p.value-centre)<=SCAN_RULES.maxScoreSpread);
+    for(const window of windowDiagnostics)window.inConsensus=consistent.some(p=>p.time===window.time);
     const early=consistent.filter(p=>p.time<5).map(p=>p.value);
     const late=consistent.filter(p=>p.time>=6).map(p=>p.value);
     const consensusDifference=early.length&&late.length?Math.abs(median(early)-median(late)):null;
@@ -94,6 +105,12 @@ export class ScanReliability {
     return {quality:fatalReason?'poor':warningReason?'limited':'good',status,reason,failReason:fatalReason||'',warnings,average:finalScore,
       latest:fatalReason?null:points.at(-1)?.value??null,points,coveragePercent:100*coverage,features,
       featureStats,windowScores:points.map(p=>Number.isFinite(p.value)?p.value:null),range:finalScore===null?null:[Math.max(0,finalScore-uncertainty),Math.min(10,finalScore+uncertainty)],qualityFlags:{...this.qualityFlags},
+      windowDiagnostics:{version:'derived-windows-1',contextScope:'Usable slot medians only; rejected or missing observations are not reconstructed.',windows:windowDiagnostics},
+      consensusWindowMask:points.map(p=>consistent.some(c=>c.time===p.time)),
+      coverageDetails:{version:'coverage-denominators-1',scope:'Processed observations after the first second; not all camera frames.',
+        observedFrames:observations.length,validFrames:validObservations,
+        validFramePercent:observations.length?100*validObservations/observations.length:null,
+        occupiedSlots:slots.size,totalSlots:45,timeSlotOccupancyPercent:100*coverage},
       reliability:{usableSlots:slots.size,totalSlots:45,usableWindows:values.length,totalWindows:9,
         scoreSpread:spread,uncertaintySpread:uncertainty,halfDifference,consistentWindows:consistent.length,consensusHalfDifference:consensusDifference,ruleVersion:'window-quality-v3'}};
   }

@@ -1,7 +1,7 @@
 /**
  * On-device Machine Learning inference utilities for the Pause experimental face model.
  * Handles bounding-box face cropping, ImageNet normalization, softmax probability extraction,
- * and temporal EMA filtering (alpha=0.20) as established in Phases 8 & 9.
+ * and temporal EMA filtering (alpha=0.20). Real-video repeatability remains unverified.
  */
 
 export const MODEL_INPUT_SIZE = 224;
@@ -80,7 +80,9 @@ export function normalizePixelsToNCHW(rgbaPixels) {
  * @returns {{ nostress: number, stress: number }} Class probabilities
  */
 export function softmax(logits) {
-  if (!logits || logits.length < 2) return { nostress: 0.5, stress: 0.5 };
+  if (!logits || logits.length !== 2 || !Array.from(logits).every(Number.isFinite)) {
+    throw new Error('Model output is missing or non-finite; no probability is available.');
+  }
   const maxLogit = Math.max(logits[0], logits[1]);
   const exp0 = Math.exp(logits[0] - maxLogit);
   const exp1 = Math.exp(logits[1] - maxLogit);
@@ -93,7 +95,7 @@ export function softmax(logits) {
 
 /**
  * Temporal Exponential Moving Average (EMA) filter for video stream stability.
- * Slashes raw frame jitter by ~83% as validated in Phase 8.
+ * Smooths probabilities; still-image sequence tests do not establish video repeatability.
  */
 export class TemporalEMAFilter {
   constructor(alpha = DEFAULT_EMA_ALPHA) {

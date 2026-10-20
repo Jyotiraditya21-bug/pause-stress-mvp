@@ -1,2 +1,7 @@
 numpy>=2,<3
 scikit-learn>=1.6,<2
+# Frozen-export verification (inference only)
+onnxruntime>=1.20,<2
+torch>=2.6,<3
+torchvision>=0.21,<1
+Pillow>=11,<13

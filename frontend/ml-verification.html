@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Pause local inference verification</title><body><h1>Local ONNX parity check</h1><pre id="result">Running synthetic RGB fixture…</pre><script type="module">
+import {normalizePixelsToNCHW} from './src/mlInference.js';
+import {predictFaceStress,disposeModelSession} from './src/modelRunner.js';
+try {
+ const rgba=new Uint8ClampedArray(224*224*4);
+ for(let y=0;y<224;y++)for(let x=0;x<224;x++){
+ const i=4*(y*224+x);rgba[i]=x;rgba[i+1]=y;rgba[i+2]=(x+y)%256;rgba[i+3]=255;
+ }
+ const expected=await (await fetch('./verification-fixture.json')).json();
+ const start=performance.now();
+ const actual=await predictFaceStress(normalizePixelsToNCHW(rgba));
+ const error=Math.max(...actual.logits.map((v,i)=>Math.abs(v-expected.logits[i])));
+ document.querySelector('#result').textContent=JSON.stringify({passed:error<=expected.tolerance,max_absolute_logit_error:error,tolerance:expected.tolerance,native:expected.logits,browser:actual.logits,initialization_and_inference_ms:performance.now()-start,scope:'Synthetic normalized RGB tensor only; PyTorch and crop pipeline parity remain unverified'},null,2);
+ await disposeModelSession();
+} catch(e){document.querySelector('#result').textContent='FAILED: '+e.stack;}
+</script></body></html>

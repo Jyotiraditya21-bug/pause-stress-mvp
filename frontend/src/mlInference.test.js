@@ -81,3 +81,7 @@ test('TemporalEMAFilter: applies exponential smoothing and dampens jitter', () =
   ema.reset();
   assert.equal(ema.getValue(), null);
 });
+
+ test('softmax rejects absent and non-finite predictions instead of inventing a score', () => {
+  for (const logits of [null, [], [1], [NaN, 1], [1, Infinity], [1, 2, 3]]) assert.throws(() => softmax(logits));
+});
