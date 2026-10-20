@@ -130,10 +130,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false}) {
             {active && state!=='analyzing' && (
               <button className="scan-cancel" onClick={cancel}>Cancel</button>
             )}
-            <p className="scan-card-footnote">
-              <Icon name="shield" size={15}/>
-              <span>Raw on-device feed. If your room background looks black or blurred, turn off Mac <strong>Studio Light</strong> in your top menu bar.</span>
-            </p>
+            <p className="scan-card-footnote"><Icon name="shield" size={15}/>Private by design. Camera off when you finish.</p>
           </>
         )}
       </section>
