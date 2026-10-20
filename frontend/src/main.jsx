@@ -9,7 +9,6 @@ import {readCameraSessions,readCameraSessionState,repairCameraSessions,deleteRec
 import {readBaseline,resetBaseline,saveBaseline} from './baselineStorage.js';
 import {initializeMonitoring} from './monitoring.js';
 import {registerSW} from 'virtual:pwa-register';
-import {preloadLandmarker} from './CameraScan.jsx';
 
 const HistoryPage=lazy(()=>import('./pages/HistoryPage.jsx'));
 const Experiment=lazy(()=>import('./Experiment.jsx'));
@@ -54,9 +53,6 @@ function App(){
   function toggleML(){const next=!mlEnabled;setMlEnabled(next);try{localStorage.setItem('pause.ml.enabled',next?'1':'0')}catch{}setNotice(next?'Experimental Neural Model enabled for camera scans.':'Neural model disabled. Using geometric QuickIndex.');}
   useEffect(()=>{
     initializeMonitoring().catch(()=>{});registerSW({immediate:true});
-    preloadLandmarker().catch(()=>{});
-    const preload=()=>{const link=document.createElement('link');link.rel='prefetch';link.href=`${import.meta.env.BASE_URL}mediapipe/face_landmarker.task`;document.head.appendChild(link)};
-    preload();
   },[]);
   const navigate=(next,{calibration=false}={})=>{setCalibrating(calibration);if(next==='Scan')setBaselineState(readBaseline());setScreen(next);setNotice('');setError('')};
   function complete(session){

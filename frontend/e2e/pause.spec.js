@@ -24,6 +24,21 @@ test('permission denial gives a specific next step',async({page})=>{
   await expect(page.getByText(/Camera access was blocked/)).toBeVisible();
 });
 
+test('camera preview appears before the face model finishes loading',async({page})=>{
+  let releaseModel;
+  const modelGate=new Promise(resolve=>{releaseModel=resolve;});
+  await page.route('**/mediapipe/face_landmarker.task',async route=>{await modelGate;await route.continue();});
+  await onboard(page);await page.goto('/',{waitUntil:'domcontentloaded'});
+  try{
+    await page.getByRole('button',{name:'Start 10-second scan'}).click();
+    await expect.poll(()=>page.locator('.scan-camera video').evaluate(video=>Boolean(video.srcObject)),{timeout:5000}).toBeTruthy();
+    await expect(page.locator('.scan-camera video')).toHaveClass(/is-ready/,{timeout:5000});
+  }finally{releaseModel();}
+  await expect(page.getByRole('button',{name:'Cancel'})).toBeVisible({timeout:15000});
+  await page.getByRole('button',{name:'Cancel'}).click();
+  expect(await page.locator('video').evaluate(video=>video.srcObject===null)).toBeTruthy();
+});
+
 test('cancel releases the video element',async({page})=>{
   await onboard(page);await page.goto('/');await page.getByRole('button',{name:'Start 10-second scan'}).click();
   await expect(page.getByRole('button',{name:'Cancel'})).toBeVisible({timeout:15000});await page.getByRole('button',{name:'Cancel'}).click();

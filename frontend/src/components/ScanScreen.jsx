@@ -27,7 +27,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false}) {
     const starting=state==='permission'||state==='loading';
     const isError=Boolean(error)||state==='failed';
     const title=calibrating?'Calibrate when calm':'Your Calm index';
-    const status=starting?'Starting camera…':state==='positioning'?'Center your face in view':state==='analyzing'?'Calculating your Calm index…':paused?hint:state==='countdown'?'Scanning your face…':hint;
+    const status=state==='permission'?'Allow camera access to continue…':state==='loading'?(videoReady?'Camera is on. Preparing face analysis…':'Preparing face analysis…'):state==='positioning'?'Center your face in view':state==='analyzing'?'Calculating your Calm index…':paused?hint:state==='countdown'?'Scanning your face…':hint;
 
     const isGoodPosition = hint.includes('Good') || hint.includes('steady');
     const isLightingIssue = hint.toLowerCase().includes('light');

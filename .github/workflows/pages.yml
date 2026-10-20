@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   deploy:
-    needs: e2e
+    needs: [e2e, lighthouse]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -61,7 +61,6 @@ jobs:
         working-directory: frontend
   lighthouse:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

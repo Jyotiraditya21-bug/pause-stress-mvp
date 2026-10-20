@@ -31,3 +31,10 @@ Do not configure backend deployment. Camera scoring, saved history and personal 
 To attach a domain, open the Pages project, choose **Custom domains**, select **Set up a custom domain**, enter the hostname and follow the DNS instructions. Keep HTTPS enabled because browsers require a secure context for camera access.
 
 Cloudflare applies `frontend/public/_headers`. GitHub Pages ignores that file, so the equivalent Content Security Policy is also present in `frontend/index.html`.
+
+
+## Rollback and cache recovery
+
+Each Pages deployment is tied to a commit in the Actions run. To roll back, identify the last known-good commit in the Deploy Pages demo history, revert the faulty release commit on `main`, and push the revert. The normal Pages workflow rebuilds that revision; do not edit `dist/` or publish a local build by hand. Confirm the deployment run succeeded, then open the live site in a fresh private window and verify the versioned model/WASM requests, scan start, cancel, result, and History. The service worker uses automatic updates. If an installed PWA keeps a broken shell, close and reopen it while online so the worker can activate the rollback; clearing the site's storage is a last resort because it deletes local history.
+
+Pages deployment now waits for Chromium/WebKit/offline checks and Lighthouse; Lighthouse category scores must meet 0.90 rather than reporting warnings. The separate `Checks` workflow also runs the frontend build, backend boundary tests, and Python/research parity. Confirm both workflows pass for the release commit before announcing it.

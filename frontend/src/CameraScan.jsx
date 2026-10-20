@@ -35,10 +35,6 @@ export function preloadLandmarker() {
   return landmarkerPromise;
 }
 
-if (typeof window !== 'undefined') {
-  preloadLandmarker().catch(() => {});
-}
-
 async function loadLandmarker(isCurrent = () => true) {
   if (cachedLandmarker) return cachedLandmarker;
   const promise = preloadLandmarker();
@@ -87,8 +83,6 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
 
   useEffect(()=>{
     mounted.current=true;
-    // Preload face landmarker immediately so starting camera has zero WASM instantiation lag
-    loadLandmarker().catch(()=>{});
     const hide=()=>{if(document.hidden&&(runtime.current.starting||runtime.current.stream)){cancel();setError('The camera stopped when the page was hidden. Return to this page and start again.');}};
     document.addEventListener('visibilitychange',hide);
     return()=>{mounted.current=false;document.removeEventListener('visibilitychange',hide);stop();};
@@ -221,12 +215,13 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera access. Use an up-to-date browser on HTTPS.');
       const streamPromise = awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(track=>track.stop()),message:'Camera permission is still pending. Allow camera access, then start again.'});
-      const modelPromise = loadLandmarker(isCurrent);
+      // Keep model failures observed while permission is pending, but do not wait
+      // for model initialization before showing the camera preview.
+      const modelPromise = loadLandmarker(isCurrent).then(model=>({model}),error=>({error}));
 
-      const [stream, model] = await Promise.all([streamPromise, modelPromise]);
+      const stream = await streamPromise;
       if(!isCurrent())return;
       r.stream=stream;
-      r.model=model;
       setState('loading');
       r.stream.getVideoTracks().forEach(track=>track.addEventListener('ended',()=>{if(isCurrent()){stop();setState('failed');setError('The camera disconnected. Reconnect it, then start again.');}}));
       if(video.current){
@@ -235,9 +230,12 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
         video.current.onloadeddata=()=>{if(runtime.current===r)setVideoReady(true);};
         video.current.onplaying=()=>{if(runtime.current===r)setVideoReady(true);};
         if(video.current.readyState>=2)setVideoReady(true);
-        try{await video.current.play();}catch{}
+        try{video.current.play()?.catch(()=>{});}catch{}
       }
+      const loadedModel=await modelPromise;
       if(!isCurrent())return;
+      if(loadedModel.error)throw loadedModel.error;
+      r.model=loadedModel.model;
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
       const enableML=new URLSearchParams(location.search).get('ml')==='1'||localStorage.getItem('pause.ml.enabled')==='1';
       r.enableML=enableML;

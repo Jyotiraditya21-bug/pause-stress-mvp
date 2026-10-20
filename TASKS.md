@@ -525,3 +525,17 @@ This audit supersedes the unqualified historical claims above that all training/
 - [x] Enforced `filter: none !important; backdrop-filter: none !important; -webkit-filter: none !important; background: transparent;` on `.scan-camera`, `video`, and `canvas` in `pause-ui.css`. Raw video pixels are never modified.
 - [x] Added helpful advisory tip regarding macOS system "Studio Light" video effects in menu bar, explaining why backgrounds can appear blacked out on Macs and how to restore natural room backdrops.
 - [x] 60 frontend unit tests, 18 Playwright E2E tests, and production build passed.
+
+
+## 2026-10-20 experimental release follow-up
+
+- [x] Audit the deployed checkout against the 15-phase MVP checklist; confirm clean `main` at `db8cb32` before follow-up work.
+- [x] Change camera startup to attach/play the camera stream as soon as `getUserMedia` resolves, without awaiting MediaPipe model readiness; preserve camera shutdown on cancellation or model failure. Model warmup now starts on button hover/focus or scan request rather than page load.
+- [x] Add a delayed-model browser regression case that requires the video preview to be ready before the model asset response completes.
+- [x] Pin the optional ONNX file checksum in its model specification.
+- [x] Make Lighthouse a required Pages deployment dependency with 0.90 category thresholds and document rollback/service-worker recovery.
+- [x] Add a single release checklist and maintenance ownership/reporting guidance.
+- [x] Verify updated startup in Chromium with a delayed model asset; full camera suite 11/11, WebKit suite 6/6, offline PWA 1/1, unit tests 60/60, production build, Lighthouse performance 0.98/accessibility 1.00.
+- [ ] Smoke-test the updated live release.
+- [ ] Complete model/dataset redistribution-rights review and physical-device camera/performance checks; these require provenance and device evidence unavailable in source review.
+- Validation status remains HOLD for stress measurement claims; no participant evidence or model threshold was tuned in this engineering pass.

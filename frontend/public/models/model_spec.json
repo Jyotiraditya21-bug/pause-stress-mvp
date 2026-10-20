@@ -1,5 +1,6 @@
 {
   "architecture": "MobileNetV3-Small + StressClassifierHead",
+  "model_sha256": "55a5cf41a63f71763127fc62e638975a7e35acf18d973c01591e1a658be36b5f",
   "input_shape": [1, 3, 224, 224],
   "color_order": "RGB",
   "normalization": {
