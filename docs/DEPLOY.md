@@ -38,3 +38,10 @@ Cloudflare applies `frontend/public/_headers`. GitHub Pages ignores that file, s
 Each Pages deployment is tied to a commit in the Actions run. To roll back, identify the last known-good commit in the Deploy Pages demo history, revert the faulty release commit on `main`, and push the revert. The normal Pages workflow rebuilds that revision; do not edit `dist/` or publish a local build by hand. Confirm the deployment run succeeded, then open the live site in a fresh private window and verify the versioned model/WASM requests, scan start, cancel, result, and History. The service worker uses automatic updates. If an installed PWA keeps a broken shell, close and reopen it while online so the worker can activate the rollback; clearing the site's storage is a last resort because it deletes local history.
 
 Pages deployment now waits for Chromium/WebKit/offline checks and Lighthouse; Lighthouse category scores must meet 0.90 rather than reporting warnings. The separate `Checks` workflow also runs the frontend build, backend boundary tests, and Python/research parity. Confirm both workflows pass for the release commit before announcing it.
+
+
+### Exact-commit live verification
+
+The `Deploy Pages demo` workflow gates publication on reusable Checks, Chromium/WebKit/offline and Lighthouse. After publication, `live-smoke` checks the deployed `release.json` commit against the workflow SHA and uploads `live-smoke-evidence`. A deployment with a failed smoke job is not an accepted release; inspect the failure and use the rollback procedure above. The test uses synthetic camera input and isolated browser storage, never a participant webcam or existing saved history.
+
+To repeat manually: from frontend, run `PAUSE_SMOKE_COMMIT=<full-deployed-sha> npm run test:live` after installing Playwright Chromium. Read `test-results/live-smoke-report.json`. This is automated browser evidence, not a physical-device camera check.

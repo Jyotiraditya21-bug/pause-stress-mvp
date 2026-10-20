@@ -9,10 +9,20 @@ import {getFaceBoundingBox,normalizePixelsToNCHW} from './mlInference.js';
 
 let cachedLandmarker = null;
 let landmarkerPromise = null;
+let landmarkerGeneration = 0;
+
+function disposeLandmarker() {
+  landmarkerGeneration++;
+  const model = cachedLandmarker;
+  cachedLandmarker = null;
+  landmarkerPromise = null;
+  try { model?.close(); } catch {}
+}
 
 export function preloadLandmarker() {
   if (cachedLandmarker) return Promise.resolve(cachedLandmarker);
   if (!landmarkerPromise) {
+    const generation = landmarkerGeneration;
     landmarkerPromise = (async () => {
       const {FaceLandmarker,FilesetResolver} = await import('@mediapipe/tasks-vision');
       const base = import.meta.env.BASE_URL || '/';
@@ -25,10 +35,14 @@ export function preloadLandmarker() {
         numFaces: 2,
         outputFacialTransformationMatrixes: true
       });
+      if (generation !== landmarkerGeneration) {
+        model.close();
+        throw new DOMException('Analysis initialization cancelled.', 'AbortError');
+      }
       cachedLandmarker = model;
       return model;
     })().catch(err => {
-      landmarkerPromise = null;
+      if (generation === landmarkerGeneration) landmarkerPromise = null;
       throw err;
     });
   }
@@ -63,7 +77,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     if(r.videoCallback&&video.current?.cancelVideoFrameCallback)video.current.cancelVideoFrameCallback(r.videoCallback);
     cancelAnimationFrame(r.frame);
   }
-  function stop() {
+  function stop(releaseAnalysis=true) {
     const r=runtime.current;cancelLoop(r);clearTimeout(r.timer);clearTimeout(r.completionTimer);
     r.stream?.getTracks().forEach(track=>track.stop());
     if(video.current){
@@ -75,6 +89,10 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
     if(overlay.current){
       const ctx=overlay.current.getContext('2d');
       if(ctx)ctx.clearRect(0,0,overlay.current.width,overlay.current.height);
+    }
+    if(releaseAnalysis){
+      disposeLandmarker();
+      r.disposeML?.().catch(()=>{});
     }
     setVideoReady(false);
     runtime.current={};
@@ -210,7 +228,8 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
 
   async function start(){
     trackEvent('scan_started');
-    stop();setError('');setProgress(0);setPaused(false);setExtended(false);setVideoReady(false);setState('permission');setHint('Starting camera…');
+    // Retain button-hover prewarming when starting; all exit paths dispose it.
+    stop(false);setError('');setProgress(0);setPaused(false);setExtended(false);setVideoReady(false);setState('permission');setHint('Starting camera…');
     const r=runtime.current;r.starting=true;const isCurrent=()=>mounted.current&&runtime.current===r;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera access. Use an up-to-date browser on HTTPS.');
@@ -247,6 +266,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
         import('./modelRunner.js').then(m=>{
           if(runtime.current===r){
             r.predictStress=m.predictFaceStress;
+            r.disposeML=m.disposeModelSession;
             m.resetMLScan();
           }
         }).catch(()=>{});

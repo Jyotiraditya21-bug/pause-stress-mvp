@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview",
+    "prebuild": "node scripts/verify-release-assets.mjs",
     "build": "vite build",
     "test": "node --test src/*.test.js",
     "test:e2e": "playwright test",
+    "test:live": "node scripts/live-smoke.cjs",
     "test:webkit": "PW_WEBKIT=1 playwright test e2e/readiness.spec.js",
     "test:offline": "PW_PREVIEW=1 playwright test e2e/offline.spec.js",
     "test:lighthouse": "lhci autorun --config=lighthouserc.json"

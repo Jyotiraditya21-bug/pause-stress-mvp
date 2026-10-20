@@ -39,3 +39,11 @@ Before expanding beyond the experimental static MVP, collect consented repeat se
 - Model and dataset redistribution rights are still not verified; the image dataset's provenance/license and participant separation are unresolved. The optional neural asset remains experimental, and no claim of permission for reuse or commercial redistribution is made. Resolve the source rights before repackaging or broadening distribution.
 - Real camera permission/interruption tests on physical Safari/iPhone and representative-device startup, battery and memory measurements remain manual evidence gates. Automated fake-camera tests cannot establish them.
 - Validation remains HOLD. Repeatability, nuisance sensitivity, task discrimination and subgroup robustness still require consented participant data. The experimental MVP is not a validated stress measurement.
+
+
+## Release hardening follow-up — 2026-10-20
+
+- Camera-preview fix deployed in dcb31b6; both GitHub workflows passed.
+- Local font hosting, runtime notices/dependency inventory, frozen asset checks, full deployment gates and removal of unused runtime copies prepared.
+- Production npm audit reported zero vulnerabilities. Neural provenance remains unknown by user direction.
+- Physical-device acceptance and empirical validation remain outstanding; see docs/DEVICE_ACCEPTANCE.md (DEVICE_ACCEPTANCE.md from this directory). Live final-commit smoke evidence is recorded separately after deployment.

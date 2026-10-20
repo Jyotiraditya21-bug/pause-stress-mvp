@@ -2,10 +2,11 @@ name: Checks
 
 on:
   push:
-    branches: [main, prod-hardening]
+    branches: [prod-hardening]
   pull_request:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

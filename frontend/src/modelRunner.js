@@ -105,12 +105,10 @@ export async function disposeModelSession() {
   sessionGeneration++;
   scanGeneration++;
   sessionPromise = null;
-  if (activeSession) {
-    try {
-      await activeSession.release();
-    } catch {}
-    activeSession = null;
-    sessionPromise = null;
-  }
+  const session = activeSession;
+  activeSession = null;
   emaFilter.reset();
+  if (session) {
+    try { await session.release(); } catch {}
+  }
 }

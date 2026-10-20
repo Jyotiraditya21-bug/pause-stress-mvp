@@ -71,3 +71,29 @@ for(const viewport of [{width:360,height:640},{width:390,height:844},{width:768,
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
   });
 }
+
+
+test('restart after cancelling a pending model releases old streams',async({page})=>{
+  let release;
+  const gate=new Promise(resolve=>{release=resolve;});
+  let first=true;
+  await page.route('**/mediapipe/face_landmarker.task',async route=>{if(first){first=false;await gate;}await route.continue();});
+  await onboard(page);
+  await page.addInitScript(()=>{
+    window.testStreams=[];
+    const original=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia=async options=>{const stream=await original(options);window.testStreams.push(stream);return stream;};
+  });
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  try{
+    await page.getByRole('button',{name:'Start 10-second scan'}).click();
+    await expect.poll(()=>page.locator('video').evaluate(v=>Boolean(v.srcObject))).toBeTruthy();
+    await page.getByRole('button',{name:'Cancel',exact:true}).click();
+    expect(await page.evaluate(()=>window.testStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBeTruthy();
+    release();
+    await page.getByRole('button',{name:'Start 10-second scan'}).click();
+    await expect(page.locator('.scan-circle:not(.is-loading)')).toBeVisible({timeout:20000});
+    await page.getByRole('button',{name:'History',exact:true}).click();
+    await expect.poll(()=>page.evaluate(()=>window.testStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBeTruthy();
+  }finally{release();}
+});

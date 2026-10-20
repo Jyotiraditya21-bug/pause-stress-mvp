@@ -38,7 +38,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false}) {
         <span className="welcome-chip"><span aria-hidden="true"/>A quiet space for yourself</span>
         <h1>{title}</h1>
         <p className="scan-intro">{calibrating?'A familiar reference. A more personal check-in. Take a moment when you feel calm.':'Take a breath. Find your light. Give yourself a moment to pause.'}</p>
-        <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'A short 10-second camera check-in gives you an experimental facial index based on facial geometry. No wearables, no questions, completely private.'}</p>
+        <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'A short 10-second camera check-in gives you an experimental facial index based on facial geometry. No wearables or questions. Video stays on your device.'}</p>
         <ol className="scan-guide">
           <li><span className="guide-icon guide-peach"><Icon name="sun"/></span><div><strong>Find a comfortable spot</strong><p>Sit facing soft, even light.</p></div></li>
           <li><span className="guide-icon guide-mint"><Icon name="scan"/></span><div><strong>Bring your face into view</strong><p>Look naturally toward the camera.</p></div></li>

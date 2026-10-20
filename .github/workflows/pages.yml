@@ -11,8 +11,10 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
   deploy:
-    needs: [e2e, lighthouse]
+    needs: [checks, e2e, lighthouse]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -74,3 +76,28 @@ jobs:
         working-directory: frontend
       - run: npm run test:lighthouse
         working-directory: frontend
+
+  live-smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:live
+        working-directory: frontend
+        env:
+          PAUSE_SMOKE_URL: https://jyotiraditya21-bug.github.io/pause-stress-mvp/
+          PAUSE_SMOKE_COMMIT: ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-smoke-evidence
+          path: frontend/test-results/live-smoke-*

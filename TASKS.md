@@ -539,3 +539,15 @@ This audit supersedes the unqualified historical claims above that all training/
 - [ ] Smoke-test the updated live release.
 - [ ] Complete model/dataset redistribution-rights review and physical-device camera/performance checks; these require provenance and device evidence unavailable in source review.
 - Validation status remains HOLD for stress measurement claims; no participant evidence or model threshold was tuned in this engineering pass.
+
+
+## Release hardening follow-up — 2026-10-20
+
+- Camera-preview fix deployed in dcb31b6; both GitHub workflows passed.
+- Local font hosting, runtime notices/dependency inventory, frozen asset checks, full deployment gates and removal of unused runtime copies prepared.
+- Production npm audit reported zero vulnerabilities. Neural provenance remains unknown by user direction.
+- Physical-device acceptance and empirical validation remain outstanding; see docs/DEVICE_ACCEPTANCE.md (DEVICE_ACCEPTANCE.md from this directory). Live final-commit smoke evidence is recorded separately after deployment.
+
+- Final hardening: explicit analysis-resource disposal and immediate navigation teardown; new cancel/restart regression passes. Local Lighthouse 0.94 performance / 1.00 accessibility; cached offline test passes.
+- Full dependency audit adds 17 unresolved development-only advisories, zero critical; production audit remains zero. Scope/owner recorded in docs/RELEASE_AUDIT_2026-10-20.md.
+- Added exact-commit post-deployment synthetic smoke and evidence artifact. Phase-by-phase disposition is in docs/RELEASE_CHECKLIST.md; physical-device and validation work are not marked complete.
