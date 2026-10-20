@@ -551,3 +551,5 @@ This audit supersedes the unqualified historical claims above that all training/
 - Final hardening: explicit analysis-resource disposal and immediate navigation teardown; new cancel/restart regression passes. Local Lighthouse 0.94 performance / 1.00 accessibility; cached offline test passes.
 - Full dependency audit adds 17 unresolved development-only advisories, zero critical; production audit remains zero. Scope/owner recorded in docs/RELEASE_AUDIT_2026-10-20.md.
 - Added exact-commit post-deployment synthetic smoke and evidence artifact. Phase-by-phase disposition is in docs/RELEASE_CHECKLIST.md; physical-device and validation work are not marked complete.
+
+- CI 39442393870 blocked publication on Lighthouse performance 0.70 despite a local 0.94. Addressed font/initial-cache contention by preloading the two primary local font weights and registering offline caching after page load. Lighthouse reports now upload on failures for diagnosis; the 0.90 gate is unchanged.

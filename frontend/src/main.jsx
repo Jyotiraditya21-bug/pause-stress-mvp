@@ -53,7 +53,7 @@ function App(){
   const [notice,setNotice]=useState(''),[error,setError]=useState('');
   function toggleML(){const next=!mlEnabled;setMlEnabled(next);try{localStorage.setItem('pause.ml.enabled',next?'1':'0')}catch{}setNotice(next?'Experimental Neural Model enabled for camera scans.':'Neural model disabled. Using geometric QuickIndex.');}
   useEffect(()=>{
-    initializeMonitoring().catch(()=>{});registerSW({immediate:true});
+    initializeMonitoring().catch(()=>{});registerSW({immediate:false});
   },[]);
   const navigate=(next,{calibration=false}={})=>{setCalibrating(calibration);if(next==='Scan')setBaselineState(readBaseline());setScreen(next);setNotice('');setError('')};
   function complete(session){
