@@ -63,7 +63,7 @@ function cameraError(error) {
   return error?.message||'Facial analysis could not start. Reload the page, then try again.';
 }
 
-export default function CameraScan({onComplete,baseline=null,calibrating=false,render}) {
+export default function CameraScan({onComplete,baseline=null,calibrating=false,mlEnabled=true,render}) {
   const [state,setState]=useState('idle');
   const [error,setError]=useState(''),[hint,setHint]=useState('Center your face in view');
   const [progress,setProgress]=useState(0),[paused,setPaused]=useState(false);
@@ -256,7 +256,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,r
       if(loadedModel.error)throw loadedModel.error;
       r.model=loadedModel.model;
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
-      const enableML=new URLSearchParams(location.search).get('ml')==='1'||localStorage.getItem('pause.ml.enabled')==='1';
+      const enableML=new URLSearchParams(location.search).get('ml')==='1'||mlEnabled;
       r.enableML=enableML;
       if(enableML){
         r.mlCanvas=document.createElement('canvas');

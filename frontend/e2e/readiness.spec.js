@@ -60,3 +60,24 @@ test('trends do not join different baselines and use elapsed date spacing',async
   const xs=await page.locator('.history-trend').first().locator('circle').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('cx'))));
   expect((xs[1]-xs[0])/(xs[2]-xs[0])).toBeCloseTo(.1);
 });
+
+
+test('neural model defaults on and its off/on preference survives reloads',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
+  await page.goto('/');
+  await page.getByRole('button',{name:'Settings',exact:true}).click();
+  const toggle=page.getByRole('switch',{name:'Experimental neural model'});
+  await expect(toggle).toBeChecked();
+  await toggle.click();await expect(toggle).not.toBeChecked();
+  await page.reload();await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await expect(toggle).not.toBeChecked();
+  await toggle.click();await expect(toggle).toBeChecked();
+  await page.reload();await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await expect(toggle).toBeChecked();
+});
+
+test('previously saved neural off preference is respected',async({page})=>{
+  await page.addInitScript(()=>{localStorage.setItem('pause.onboarded.v1','1');localStorage.setItem('pause.ml.enabled','0');});
+  await page.goto('/');await page.getByRole('button',{name:'Settings',exact:true}).click();
+  await expect(page.getByRole('switch',{name:'Experimental neural model'})).not.toBeChecked();
+});

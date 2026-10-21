@@ -22,8 +22,8 @@ function getRecoveryAction(errorMessage) {
   return 'Check your lighting, center your face in the circle, and try again.';
 }
 
-export default function ScanScreen({onComplete,baseline,calibrating=false}) {
-  return <CameraScan onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active,videoReady})=>{
+export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnabled=true}) {
+  return <CameraScan mlEnabled={mlEnabled} onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active,videoReady})=>{
     const starting=state==='permission'||state==='loading';
     const isError=Boolean(error)||state==='failed';
     const title=calibrating?'Calibrate when calm':'Your Calm index';

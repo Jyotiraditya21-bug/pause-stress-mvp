@@ -553,3 +553,13 @@ This audit supersedes the unqualified historical claims above that all training/
 - Added exact-commit post-deployment synthetic smoke and evidence artifact. Phase-by-phase disposition is in docs/RELEASE_CHECKLIST.md; physical-device and validation work are not marked complete.
 
 - CI 39442393870 blocked publication on Lighthouse performance 0.70 despite a local 0.94. Addressed font/initial-cache contention by preloading the two primary local font weights and registering offline caching after page load. Lighthouse reports now upload on failures for diagnosis; the 0.90 gate is unchanged.
+
+
+## 2026-10-21 neural default
+
+- Enable the experimental neural model by default for users without a saved preference; preserve an explicit saved off choice.
+- Pass the current Settings preference into each scan, including when browser storage is unavailable; camera preview still starts independently of analysis model loading.
+- Add an accessible Settings switch with explicit on/off actions, browser regressions for defaults/persistence/runtime loading, and live verification of the production preference.
+- Existing experimental wording, unknown provenance and separate geometric results remain explicit. No model weights, preprocessing or scoring formula changes.
+
+- Verification: 60 unit tests, production build and five targeted Chromium checks passed (default/persistence, enabled/disabled runtime loading and delayed-model camera preview). Production deployment is gated on the full CI and live smoke suites.

@@ -18,7 +18,7 @@ Read TASKS.md for completed work, remaining tasks, and verification gaps. Update
 - backend/requirements.txt: Python dependencies.
 - backend/.env.example: configuration template only.
 
-Preserve the existing stack. Gemini is the chosen guidance provider. An optional, user-enabled experimental MobileNet image classifier is available. Its image-level test metrics do not validate live stress measurement. The user authorized a browser port of the fixed, unvalidated mathematical facial index and removal of the questionnaire rating from the current UI. Keep its experimental status and personal-baseline interpretation explicit.
+Preserve the existing stack. Gemini is the chosen guidance provider. The experimental MobileNet image classifier is enabled by default per the user request on 2026-10-21, with a Settings opt-out and saved preferences respected. Its image-level test metrics do not validate live stress measurement. The user authorized a browser port of the fixed, unvalidated mathematical facial index and removal of the questionnaire rating from the current UI. Keep its experimental status and personal-baseline interpretation explicit.
 
 ## Product and scientific boundaries
 

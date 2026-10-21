@@ -97,3 +97,19 @@ test('restart after cancelling a pending model releases old streams',async({page
     await expect.poll(()=>page.evaluate(()=>window.testStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBeTruthy();
   }finally{release();}
 });
+
+
+for(const enabled of [true,false]){
+  test(`scan loads neural runtime only when enabled (${enabled})`,async({page})=>{
+    await onboard(page);
+    if(!enabled)await page.addInitScript(()=>localStorage.setItem('pause.ml.enabled','0'));
+    const neuralRequests=[];
+    page.on('request',request=>{if(request.url().includes('/src/modelRunner.js'))neuralRequests.push(request.url());});
+    await page.goto('/');await page.getByRole('button',{name:'Start 10-second scan'}).click();
+    await expect(page.locator('.scan-circle:not(.is-loading)')).toBeVisible({timeout:20000});
+    if(enabled)await expect.poll(()=>neuralRequests.length).toBeGreaterThan(0);
+    else expect(neuralRequests).toHaveLength(0);
+    await page.getByRole('button',{name:'Cancel',exact:true}).click();
+    expect(await page.locator('video').evaluate(video=>video.srcObject===null)).toBeTruthy();
+  });
+}

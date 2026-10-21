@@ -24,6 +24,13 @@ const expected=process.env.PAUSE_SMOKE_COMMIT;
  await expect(page.getByRole('heading',{name:'A quiet moment to check in'})).toBeVisible();
  await page.getByRole('button',{name:'Continue to scan'}).click();
  report.checks.push('onboarding');
+ await page.getByRole('button',{name:'Settings',exact:true}).click();
+ const neuralToggle=page.getByRole('switch',{name:'Experimental neural model'});
+ await expect(neuralToggle).toBeChecked();await neuralToggle.click();await expect(neuralToggle).not.toBeChecked();
+ await page.reload();await page.getByRole('button',{name:'Settings',exact:true}).click();
+ await expect(neuralToggle).not.toBeChecked();await neuralToggle.click();await expect(neuralToggle).toBeChecked();
+ await page.getByRole('button',{name:'Scan',exact:true}).click();
+ report.checks.push('neural enabled by default; saved off preference survives reload; can re-enable');
  const axe=await new AxeBuilder({page}).analyze();expect(axe.violations.filter(v=>['serious','critical'].includes(v.impact))).toEqual([]);
  report.checks.push('scan accessibility');
  await page.evaluate(()=>{

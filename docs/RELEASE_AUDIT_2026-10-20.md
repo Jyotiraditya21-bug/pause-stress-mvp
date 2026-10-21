@@ -1,6 +1,6 @@
 # Release audit — 2026-10-20
 
-The default release remains a local browser experimental geometric check-in. No backend deployment, accounts or sync. Optional neural output remains distinct and opt-in. User explicitly chose to keep training provenance unknown; no rights or validation clearance is asserted.
+The default release remains a local browser experimental geometric check-in. No backend deployment, accounts or sync. Neural output remains distinct and experimental. As of 2026-10-21 it is enabled by default, with a Settings opt-out and saved preferences respected. User explicitly chose to keep training provenance unknown; no rights or validation clearance is asserted.
 
 - Production npm audit: zero reported vulnerabilities (2026-10-20). This is an advisory snapshot, not proof of absence of defects.
 - Frozen SHA-256 manifest covers MediaPipe assets, neural weights/specification, reference and acquisition configurations. Builds verify this manifest; deliberate changes require review and version updates.
