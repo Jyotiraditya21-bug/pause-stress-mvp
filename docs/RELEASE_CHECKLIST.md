@@ -25,7 +25,7 @@ Reviewed 2026-10-20. This checklist defines the current GitHub Pages release. It
 - [x] Rollback and service-worker recovery steps are documented in `DEPLOY.md`.
 - [x] Delayed-model camera-preview regression passes in Chromium; face preview appears before model initialization completes.
 - [x] Local Lighthouse preview: performance 0.98, accessibility 1.00, LCP 2.0 s, TBT 0 ms after removing eager model downloads from initial page load.
-- [ ] Smoke-test the resulting live commit. The Pages workflow now runs `live-smoke` after deployment and stores `live-smoke-evidence`; this item passes only when that exact commit’s job succeeds.
+- [ ] Smoke-test the resulting live commit. The Pages workflow `39443667426` passed `live-smoke` against f24aa3a, including the camera, history, accessibility, mobile, network and offline checks. It reported 101 ms to the first synthetic camera frame (68 ms after permission grant). Physical device timing remains unverified.
 - [ ] Complete physical-device camera and representative performance checks before claiming supported-device coverage.
 - [ ] Resolve third-party/model/dataset rights before expanding neural-model distribution.
 

@@ -81,6 +81,7 @@ jobs:
         with:
           name: lighthouse-evidence
           path: frontend/.lighthouseci/
+          include-hidden-files: true
 
   live-smoke:
     needs: deploy
