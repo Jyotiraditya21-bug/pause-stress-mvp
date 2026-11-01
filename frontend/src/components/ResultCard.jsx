@@ -43,7 +43,7 @@ function Trend({ windows, excluded=[] }) {
     <svg className="pz-spark" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Score for each second of the scan">
       <line className="pz-spark-ref" x1={PAD} x2={W - PAD} y1={y(5)} y2={y(5)} />
       {segments.map((seg, i) => seg.length === 1 ? <circle key={i} className="pz-spark-dot" cx={seg[0][0]} cy={seg[0][1]} r="3.5" /> : <polyline key={i} className="pz-spark-line" points={seg.map((p) => p.join(",")).join(" ")} />)}
-      {excluded.map(index=><circle key={index} cx={x(index-1)} cy={y(windows[index-1])} r="4" fill="white" stroke="currentColor" strokeWidth="2"><title>Window {index} excluded from final score</title></circle>)}
+      {excluded.map(index=><circle key={index} cx={x(index-1)} cy={y(windows[index-1])} r="4" fill="white" stroke="currentColor" strokeWidth="2"><title>{`Window ${index} excluded from final score`}</title></circle>)}
     </svg>
     <div className="pz-spark-legend" aria-hidden="true">
       <span className="legend-item"><i className="legend-mark legend-dot"/> Measured second</span>

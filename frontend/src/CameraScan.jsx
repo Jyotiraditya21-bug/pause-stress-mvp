@@ -5,7 +5,7 @@ import {awaitResource} from './resourceWait.js';
 import {advanceScanState,createScanState,HARD_CAP_SECONDS} from './scanState.js';
 import {trackEvent} from './monitoring.js';
 import {TolerantScan,TOLERANCE_CONFIG,adaptiveState} from './tolerantScan.js';
-import {getFaceBoundingBox,normalizePixelsToNCHW} from './mlInference.js';
+import {drawAlignedFace,ML_SAMPLE_INTERVAL_MS,MODEL_ID,normalizePixelsToNCHW} from './mlInference.js';
 
 let cachedLandmarker = null;
 let landmarkerPromise = null;
@@ -120,14 +120,19 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
       summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
     }
     if(r.enableML&&r.mlProbs?.length){
-      const avgStress=r.mlProbs.reduce((a,b)=>a+b,0)/r.mlProbs.length;
+      const sorted=[...r.mlProbs].sort((a,b)=>a-b);
+      const trim=sorted.length>=10?Math.floor(sorted.length*.1):0;
+      const retained=trim?sorted.slice(trim,-trim):sorted;
+      const avgStress=retained.reduce((a,b)=>a+b,0)/retained.length;
       summary.mlResult={
-        model:'MobileNetV3-Small-v1',
+        status:'available',
+        model:MODEL_ID,
         samples:r.mlProbs.length,
         averageStressProbability:avgStress,
-        classification:avgStress>=0.5?'stress':'nostress',
-        confidence:Math.abs(avgStress-0.5)*2
+        interpretation:'Acted-expression dataset class only; not a stress probability.'
       };
+    }else if(r.enableML){
+      summary.mlResult={status:'unavailable',model:MODEL_ID,reason:r.mlError||'The optional model did not return enough samples. The geometric index was used.'};
     }
     trackEvent(summary.status==='failed'?'scan_failed':'scan_result',{status:summary.status,reason:summary.status==='failed'?'acquisition_failed':summary.status==='limited'?'limited_confidence':'accepted'});
     // Release the camera before the brief result transition, including on cap.
@@ -200,22 +205,25 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
         const draw=canvas.getContext('2d');draw.clearRect(0,0,canvas.width,canvas.height);draw.fillStyle='#6cc3c6';
         landmarks?.filter((_,i)=>i%5===0).forEach(p=>{draw.beginPath();draw.arc(p.x*canvas.width,p.y*canvas.height,1.7,0,Math.PI*2);draw.fill();});
       }
-      if(r.enableML&&landmarks&&r.mlCanvas&&r.predictStress&&!r.mlRunning){
-        const box=getFaceBoundingBox(landmarks,v.videoWidth,v.videoHeight,0.15);
-        if(box&&box.width>20&&box.height>20){
+      if(r.enableML&&landmarks&&r.mlCanvas&&r.predictStress&&!r.mlRunning&&now-(r.lastMLRun||0)>=ML_SAMPLE_INTERVAL_MS){
+        r.lastMLRun=now;
+        if(landmarks.length>=363){
           r.mlRunning=true;
           const mlCtx=r.mlCanvas.getContext('2d',{willReadFrequently:true});
-          mlCtx.drawImage(v,box.left,box.top,box.width,box.height,0,0,224,224);
-          const rgba=mlCtx.getImageData(0,0,224,224).data;
-          const tensor=normalizePixelsToNCHW(rgba);
-          r.predictStress(tensor).then(res=>{
-            if(runtime.current===r){
-              r.mlRunning=false;
-              if(Number.isFinite(res.smoothedStressProb)){
-                r.mlProbs.push(res.smoothedStressProb);
+          const aligned=drawAlignedFace(v,mlCtx,landmarks,v.videoWidth,v.videoHeight);
+          if(!aligned)r.mlRunning=false;
+          else{
+            const rgba=mlCtx.getImageData(0,0,224,224).data;
+            const tensor=normalizePixelsToNCHW(rgba);
+            r.predictStress(tensor).then(res=>{
+              if(runtime.current===r){
+                r.mlRunning=false;
+                if(Number.isFinite(res.rawStressProb)){
+                  r.mlProbs.push(res.rawStressProb);
+                }
               }
-            }
-          }).catch(()=>{if(runtime.current===r)r.mlRunning=false;});
+            }).catch(error=>{if(runtime.current===r){r.mlRunning=false;r.mlError=error?.message||'Optional model inference failed.';}});
+          }
         }
       }
       r.scan.allFrames++;r.scan.inferenceSum+=inferenceMs;r.scan.processingSum+=performance.now()-processingStart;
@@ -269,7 +277,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
             r.disposeML=m.disposeModelSession;
             m.resetMLScan();
           }
-        }).catch(()=>{});
+        }).catch(error=>{if(runtime.current===r)r.mlError=error?.message||'Optional model could not load.';});
       }
       r.lastVideoTime=-1;r.lastRun=0;r.starting=false;
       r.scan={wallStart:performance.now(),captureStart:null,elapsed:0,index:tolerant?new TolerantScan({baseline}):new QuickIndex({baseline,mode:baseline?'baseline':'generic',policy:prospective?'prospective-1':'legacy'}),total:0,valid:0,allFrames:0,inferenceSum:0,processingSum:0,machine:createScanState(performance.now()/1000)};

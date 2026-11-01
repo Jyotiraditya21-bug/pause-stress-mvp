@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  getFaceAlignment,
   getFaceBoundingBox,
   normalizePixelsToNCHW,
   softmax,
@@ -26,6 +27,30 @@ test('getFaceBoundingBox: correctly calculates bounded square with margin', () =
 test('getFaceBoundingBox: handles null/empty landmarks gracefully', () => {
   assert.equal(getFaceBoundingBox([], 640, 480), null);
   assert.equal(getFaceBoundingBox(null, 640, 480), null);
+});
+
+test('getFaceAlignment maps MediaPipe eye centres and nose to training coordinates',()=>{
+  const landmarks=Array.from({length:478},()=>({x:.5,y:.5}));
+  landmarks[33]=landmarks[133]={x:.30,y:.40};
+  landmarks[362]=landmarks[263]={x:.70,y:.40};
+  landmarks[1]={x:.50,y:.62};
+  const matrix=getFaceAlignment(landmarks,200,200);
+  assert.ok(matrix);
+  const map=([x,y])=>[matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f];
+  for(const [actual,expected] of [
+    [map([60,80]),[70,88]],
+    [map([140,80]),[154,88]],
+    [map([100,124]),[112,132]]
+  ]){
+    assert.ok(Math.abs(actual[0]-expected[0])<1e-9);
+    assert.ok(Math.abs(actual[1]-expected[1])<1e-9);
+  }
+});
+
+test('getFaceAlignment rejects missing or degenerate landmarks',()=>{
+  assert.equal(getFaceAlignment([],640,480),null);
+  const landmarks=Array.from({length:478},()=>({x:.5,y:.5}));
+  assert.equal(getFaceAlignment(landmarks,640,480),null);
 });
 
 test('normalizePixelsToNCHW: converts RGBA buffer to normalized Float32 NCHW tensor', () => {

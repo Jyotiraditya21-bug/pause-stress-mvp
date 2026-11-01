@@ -71,6 +71,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
         ) : (
           <>
             <div className={`scan-circle ${paused?'is-paused':''} ${starting?'is-loading':''}`} style={{'--progress':progress}}>
+              {active&&<span className="scan-orbit" aria-hidden="true"/>}
               <svg className="scan-ring" viewBox="0 0 320 320" aria-hidden="true">
                 <circle cx="160" cy="160" r="147"/>
                 <circle className="scan-ring-fill" cx="160" cy="160" r="147" pathLength="1"/>
@@ -100,6 +101,8 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
               </div>
               {state==='countdown' && <span className="scan-badge" aria-label={`${secondsRemaining} seconds remaining`}>{secondsRemaining}</span>}
             </div>
+
+            {state==='analyzing'&&<div className="processing-status" role="status"><span/><span/><span/><p>Combining usable camera observations</p></div>}
 
             {state === 'positioning' && (
               <div className={`scan-feedback-chip ${chipType}`} role="status">

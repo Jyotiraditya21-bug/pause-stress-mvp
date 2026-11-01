@@ -6,8 +6,8 @@
   "public/mediapipe/wasm/vision_wasm_module_internal.wasm": "ee03b14a878e6c3c053a1bfa62e166dc45244be54dc0bbe61c578f710b771f6a",
   "public/mediapipe/wasm/vision_wasm_nosimd_internal.js": "510fc70a170eb8b46767a7abab2af89a7a8341fa5b3ebfb8a5de41a79b7fa9df",
   "public/mediapipe/wasm/vision_wasm_nosimd_internal.wasm": "b802041d105876865d6a0806f2ff7c4419a7f1b80bc01340fe36e759c2030011",
-  "public/models/pause_stress_model.onnx": "55a5cf41a63f71763127fc62e638975a7e35acf18d973c01591e1a658be36b5f",
-  "public/models/model_spec.json": "a974a7e9601f062e6ae822de3275cd1bd105972ec8d4fd4a0bcd439802433edc",
+  "public/models/pause_stress_model.onnx": "a3a32ee1343fed415d8f70d16ff8ffde6f7c131ab2ce2de99c540f31ecfa6fa8",
+  "public/models/model_spec.json": "9e08f05cb9dabf150f94171c19d4d82a0fb2eea57465d5fd64b9067bffbb23cc",
   "src/faceReference.json": "aa34298ac344b7ffff5a1e88c48d14d803a9e54d91be2c95498b1f4a83d9b9e8",
   "src/prospectivePolicy.json": "8666fc4ec616ef061b3c570e9305964131ff357be96de27adb1970318e72eb13",
   "src/toleranceConfig.json": "385898b9bd537766ff661b8325d426ec06496cbfb6a447171fe714915fab93b9"

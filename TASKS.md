@@ -1,6 +1,19 @@
 # MVP task tracker
 
-Last updated: 2026-10-20
+Last updated: 2026-11-01
+
+## 2026-11-01 MobileNetV3-Large live comparator integration
+
+- [x] Preserve the geometry-based Calm index as the only visible score and fallback.
+- [x] Build an equal-weight soup from all six verified actor-disjoint RAVDESS checkpoints; export ONNX SHA-256 `a3a32ee...` with PyTorch/ONNX max absolute parity error `9.83e-7`.
+- [x] Replace the optional MobileNetV3-Small asset with the 16 MiB MobileNetV3-Large candidate.
+- [x] Approximate its training alignment using MediaPipe eye/nose landmarks mapped to the same affine target coordinates, sample at no more than 5 fps, and aggregate raw probabilities with a fixed trimmed mean.
+- [x] Label outputs as acted-expression comparisons rather than stress probabilities; use the geometric index normally if model loading/inference fails.
+- [x] Update Settings, About and model metadata with the verified source-checkpoint results: AUC 0.906 [0.860, 0.959], accuracy 79.39%, balanced accuracy 78.88% on 1,344 RAVDESS videos.
+- [x] Add subtle scan/processing animations while preserving the existing palette and reduced-motion behavior.
+- [x] Pass 62 frontend unit tests, production build, 14 Chromium camera/UI tests, and browser ONNX fixture parity.
+- [ ] Evaluate the averaged candidate itself on untouched external data and real repeated scans. Source-fold metrics are not candidate/live-stress metrics.
+- [ ] Complete redistribution-rights review and physical-device Safari/mobile performance testing before release approval.
 
 ## Current scope and status — 2026-10-20: Experimental Facial Check-in MVP Release
 

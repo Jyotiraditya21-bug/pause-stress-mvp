@@ -1,6 +1,6 @@
 /**
  * Client-side ONNX Runtime Web session manager for the Pause experimental face model.
- * Loads the 3.84 MB MobileNetV3-Small ONNX model locally from public/models/pause_stress_model.onnx.
+ * Loads the experimental RAVDESS MobileNetV3-Large model soup locally.
  * Preserves zero-server-upload privacy guarantee (runs 100% locally on device).
  */
 import * as ort from 'onnxruntime-web/wasm';

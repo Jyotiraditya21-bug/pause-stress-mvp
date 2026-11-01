@@ -10,7 +10,7 @@ try {
  const start=performance.now();
  const actual=await predictFaceStress(normalizePixelsToNCHW(rgba));
  const error=Math.max(...actual.logits.map((v,i)=>Math.abs(v-expected.logits[i])));
- document.querySelector('#result').textContent=JSON.stringify({passed:error<=expected.tolerance,max_absolute_logit_error:error,tolerance:expected.tolerance,native:expected.logits,browser:actual.logits,initialization_and_inference_ms:performance.now()-start,scope:'Synthetic normalized RGB tensor only; PyTorch and crop pipeline parity remain unverified'},null,2);
+ document.querySelector('#result').textContent=JSON.stringify({passed:error<=expected.tolerance,max_absolute_logit_error:error,tolerance:expected.tolerance,model_sha256:expected.model_sha256,native:expected.logits,browser:actual.logits,initialization_and_inference_ms:performance.now()-start,scope:'Synthetic normalized RGB tensor browser parity only; not camera, repeatability or stress validation'},null,2);
  await disposeModelSession();
 } catch(e){document.querySelector('#result').textContent='FAILED: '+e.stack;}
 </script></body></html>

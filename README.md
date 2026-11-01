@@ -66,9 +66,11 @@ MediaPipe is the pretrained computer-vision component. The index itself uses a f
 | Generic, default | Fixed canonical face | Brow furrow, lip press, lip corner |
 | Personal baseline | Optional calm scan; feature median/MAD | The three generic features plus jaw geometry |
 | Tolerant experiment, opt-in | Original four-feature canonical formula or personal baseline | Soft acquisition weights, individual feature masks, smoothing, 10–20 second capture |
-| Neural model experiment, enabled by default | MobileNetV3-Small ONNX model (74.25% val bal acc) | 224×224 normalized face crop inference, EMA smoothing ($\alpha=0.20$), 100% on-device WebAssembly |
+| Optional acted-expression comparison, enabled by default | MobileNetV3-Large ONNX model soup | MediaPipe eye/nose alignment, up to 5 fps, trimmed probability mean, 100% on-device WebAssembly; does not set the visible index |
 
-Personal baselines expire after 30 days and are versioned. The tolerant experiment is available at [`?tolerance=1`](http://127.0.0.1:5173/?tolerance=1); it remains off by default until its fixed evaluation criteria pass. Optional 3-D frontalization is also off. See [the tolerance protocol](docs/TOLERANCE.md). The experimental neural model is enabled by default and can be turned off in Settings; saved choices are respected. It can also be explicitly enabled via [`?ml=1`](http://127.0.0.1:5173/?ml=1). It runs completely on-device in WebAssembly with zero server uploads, evaluating face crops alongside the geometric index for research comparison.
+Personal baselines expire after 30 days and are versioned. The tolerant experiment is available at [`?tolerance=1`](http://127.0.0.1:5173/?tolerance=1); it remains off by default until its fixed evaluation criteria pass. Optional 3-D frontalization is also off. See [the tolerance protocol](docs/TOLERANCE.md). The optional neural comparator is enabled by default and can be turned off in Settings; saved choices are respected. It can also be explicitly enabled via [`?ml=1`](http://127.0.0.1:5173/?ml=1). It runs on-device in WebAssembly and falls back cleanly to geometry if unavailable.
+
+The neural artifact is an equal-weight average of six actor-disjoint MobileNetV3-Large checkpoints trained on RAVDESS acted expressions. The source checkpoints achieved pooled ROC-AUC 0.906 (actor-cluster 95% CI 0.860–0.959), 79.39% accuracy and 78.88% balanced accuracy across 1,344 videos. Those figures do **not** evaluate the averaged artifact, current perceived stress, live-camera repeatability or the visible Calm index. No universal production threshold has been established.
 
 No rejected scan receives a guessed number. Range and confidence describe acquisition consistency; they are not clinical certainty.
 
