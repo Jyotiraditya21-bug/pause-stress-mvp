@@ -23,7 +23,7 @@ function getRecoveryAction(errorMessage) {
 }
 
 export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnabled=true}) {
-  return <CameraScan mlEnabled={mlEnabled} onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active,videoReady})=>{
+  return <CameraScan mlEnabled={mlEnabled} onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active,videoReady,hardCap})=>{
     const starting=state==='permission'||state==='loading';
     const isError=Boolean(error)||state==='failed';
     const title=calibrating?'Calibrate when calm':'Your Calm index';
@@ -50,9 +50,9 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
       <section className={`scan-card ${active?'scan-card-active':''} ${isError?'scan-card-error':''}`} aria-label="Camera scan">
         <div className="scan-card-heading">
           <span><Icon name="scan"/> {calibrating?'Personal baseline':'Your daily pause'}</span>
-          <span className="duration-pill">{extended?'Up to 20 sec':'10 sec'}</span>
+          <span className="duration-pill">{hardCap} sec</span>
         </div>
-        <p className="scan-mode-note">{tolerant?'Experimental movement-tolerant mode · 10–20 seconds.':'10-second capture after positioning. Setup may take longer.'}</p>
+        <p className="scan-mode-note">{tolerant?'Experimental 10-second movement-tolerant capture. Small movements are handled when enough windows agree.':'10-second capture after positioning. Setup may take longer.'}</p>
 
         {isError ? (
           <div className="scan-error-view" role="alert">
@@ -116,7 +116,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
             </div>
             
             <p className="scan-hint" aria-live="polite">
-              {extended ? 'Almost there, small movements are fine' : state==='countdown' ? hint : status}
+              {state==='countdown' ? hint : status}
             </p>
 
             {!active && (

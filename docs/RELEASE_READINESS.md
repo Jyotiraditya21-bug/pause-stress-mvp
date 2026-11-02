@@ -2,11 +2,11 @@
 
 ## Release scope
 
-Pause is a static, on-device experimental facial check-in. GitHub Pages serves the frontend, local MediaPipe model and WASM; it does not host FastAPI, collect camera video, or train a stress model. This release hardens software behavior and preserves the existing fixed formulas, thresholds and opt-in tolerance policy. It does not establish psychological stress accuracy.
+Pause is a static, on-device experimental facial check-in. GitHub Pages serves the frontend, local MediaPipe model and WASM; it does not host FastAPI or collect camera video. The movement-tolerant acquisition policy changes acceptance and aggregation behavior but does not establish psychological stress accuracy.
 
 ## Implemented safeguards
 
-- Standard scans measure a fixed ten-second capture after positioning. Frame timestamps come from the video clock; rejected/dropped intervals remain missing. The 25-second acquisition safety cap remains. Tolerant mode remains explicit `?tolerance=1`, 10–20 seconds, with adoption and 3-D switches off.
+- Scans measure a fixed ten-second capture after positioning. Frame timestamps come from the video clock; rejected/dropped intervals remain missing. The default uses One Euro landmark smoothing, soft evidence weights, feature-level mouth/jaw masking and nine one-second consensus windows. Five agreeing windows may return limited confidence; no dominant cluster returns no number. Optional 3-D frontalization remains off.
 - Capture-clock metadata separates new results from historical acquisitions. Personal baselines have an identity; older baselines use their creation timestamp. Calibration navigation resets correctly and baseline expiry is rechecked on return to Scan.
 - Saved records are validated before rendering. Damaged records cannot crash History; reading never overwrites the original. Recovery requires a user action and a successful local backup before rewriting valid records. Backup deletion is separate from normal History deletion and documented in Privacy/Settings.
 - Trends group by source, algorithm, acquisition version and baseline identity, exclude calibration scans and use actual date spacing. Older personalized results lacking identity are not joined together.

@@ -60,8 +60,10 @@ def frame_weight(points,face_count,brightness,pose,speed=None,width=1,height=1):
 
 def feature_mask(row,pose,frontalized=False):
     out=dict(row)
-    if row['mar']>C['mouthMax']:out.update(lip_press=None,lip_corner=None)
+    mouth_masked=row['mar']>C['mouthMax'] or row['lip_corner']<C['smileMask']
+    if mouth_masked:out.update(lip_press=None,lip_corner=None)
     if not frontalized and pose is not None and abs(pose[1])>C['jawYawMax']:out['jaw_clench']=None
+    out['mouthMasked']=mouth_masked
     return out
 
 def frontalize(points,matrix):
@@ -103,8 +105,10 @@ class LandmarkFilter:
         return out
 
 def adaptive_state(elapsed,coverage):
+    can_extend=C['maxDuration']>C['duration']
+    extended=can_extend and elapsed>=C['duration']
     return dict(state='analyzing' if elapsed>=C['maxDuration'] or (elapsed>=C['duration'] and coverage>=C['normalCoverage']) else 'countdown',
-        extended=elapsed>=C['duration'],progress=min(1.,elapsed/(C['maxDuration'] if elapsed>=C['duration'] and coverage<C['normalCoverage'] else C['duration'])),capped=elapsed>=C['maxDuration'])
+        extended=extended,progress=min(1.,elapsed/(C['maxDuration'] if extended and coverage<C['normalCoverage'] else C['duration'])),capped=elapsed>=C['maxDuration'])
 
 def result_tier(points,coverage):
     scored=[p for p in points if finite(p['value'])];center=median([p['value'] for p in scored]);middle=len(points)/2
@@ -141,7 +145,7 @@ class TolerantScan:
                 corrected,applied=frontalize(smooth,context.get('matrix')) if self.frontalize3d else (smooth,False)
                 row=feature_mask(old.geometry(corrected),pose,applied)
             except (ValueError,IndexError,TypeError,FloatingPointError):pass
-        flags=dict(lowLight=quality['reason']=='too_dark',tooFar=quality['reason']=='too_far',tooClose=quality['reason']=='too_close',moving=quality.get('factors',{}).get('speed',1)<1,multipleFaces=quality['reason']=='multiple_faces',mouthOpen=row is not None and row['mar']>C['mouthMax'],pose=quality.get('factors',{}).get('pose',1)<1)
+        flags=dict(lowLight=quality['reason']=='too_dark',tooFar=quality['reason']=='too_far',tooClose=quality['reason']=='too_close',moving=quality.get('factors',{}).get('speed',1)<1,multipleFaces=quality['reason']=='multiple_faces',mouthOpen=row is not None and bool(row.get('mouthMasked')),pose=quality.get('factors',{}).get('pose',1)<1)
         for key,value in flags.items():self.quality_flags[key]=self.quality_flags[key] or bool(value)
         self.observations.append(dict(time=time,weight=quality['weight'] if row else 0.,pose=max(abs(pose[0]),abs(pose[1])) if pose is not None else None,speed=speed))
         if time>=C['settling']:
@@ -171,6 +175,7 @@ class TolerantScan:
             if finite(value):rows.append(row)
             points.append(dict(window=window,time=window+1.5,value=value,featuresUsed=used if finite(value) else 0))
         coverage=self.coverage();assigned=result_tier(points,coverage);none=assigned['tier']=='NONE'
+        consensus_window_mask=[any(row['window']==point['window'] for row in assigned['rows']) for point in points]
         average=None if none else median([p['value'] for p in assigned['rows']]);values=[p['value'] for p in points if finite(p['value'])]
         spread=max(C['rangeFloor'],C['madScale']*mad(values))*(C['limitedWiden'] if assigned['tier']=='LIMITED' else 1) if values else None
         poses=[r['pose'] for r in self.observations if finite(r['pose'])];speeds=[r['speed'] for r in self.observations if finite(r['speed'])]
@@ -182,4 +187,7 @@ class TolerantScan:
         stats={}
         for k in KEYS:
             a=[r[k] for r in rows if finite(r[k])];stats[k]=dict(median=median(a),mad=mad(a))
-        return dict(average=average,latest=None if none else points[-1]['value'] if points else None,tier=assigned['tier'],status='failed' if none else 'limited' if assigned['tier']=='LIMITED' else 'ok',quality='poor' if none else 'limited' if assigned['tier']=='LIMITED' else 'good',confidence=confidence,range=None if none else [max(0.,average-spread),min(10.,average+spread)],warnings=['Movement or expressions reduced reliability'] if assigned['tier']=='LIMITED' else [],reason=fail_reason or ('Movement or expressions reduced reliability' if assigned['tier']=='LIMITED' else ''),failReason=fail_reason,reasonCode=top if none else '',points=points,windowScores=[p['value'] for p in points],windowFeaturesUsed=[p['featuresUsed'] for p in points],effectiveCoverage=coverage,coveragePercent=100*coverage,features={k:s['median'] for k,s in stats.items()} if rows else None,featureStats=stats if rows else None,mode='baseline' if self.baseline else 'generic',algoVersion=C['version'],frontalize3d=self.frontalize3d,qualityFlags=dict(self.quality_flags),reliability=dict(usableSlots=len(slots),totalSlots=C['coverageSlots'],usableWindows=len(values),totalWindows=count,consensusFraction=assigned['fraction'],consensusHalfDifference=assigned['difference'],poseSpeedVariability=variability,rejectionReasons=self.reasons,ruleVersion=C['version']))
+        settled=[r for r in self.observations if r['time']>=C['settling']]
+        valid_frames=sum(r['weight']>0 for r in settled)
+        coverage_details=dict(version='weighted-coverage-1',scope='Processed observations and weighted 0.2-second slots after the settling second.',observedFrames=len(settled),validFrames=valid_frames,validFramePercent=100*valid_frames/len(settled) if settled else None,occupiedSlots=len(slots),totalSlots=C['coverageSlots'],timeSlotOccupancyPercent=100*len(slots)/C['coverageSlots'])
+        return dict(average=average,latest=None if none else points[-1]['value'] if points else None,tier=assigned['tier'],status='failed' if none else 'limited' if assigned['tier']=='LIMITED' else 'ok',quality='poor' if none else 'limited' if assigned['tier']=='LIMITED' else 'good',confidence=confidence,range=None if none else [max(0.,average-spread),min(10.,average+spread)],warnings=['Movement or expressions reduced reliability'] if assigned['tier']=='LIMITED' else [],reason=fail_reason or ('Movement or expressions reduced reliability' if assigned['tier']=='LIMITED' else ''),failReason=fail_reason,reasonCode=top if none else '',points=points,windowScores=[p['value'] for p in points],windowFeaturesUsed=[p['featuresUsed'] for p in points],consensusWindowMask=consensus_window_mask,effectiveCoverage=coverage,coveragePercent=100*coverage,coverageDetails=coverage_details,features={k:s['median'] for k,s in stats.items()} if rows else None,featureStats=stats if rows else None,mode='baseline' if self.baseline else 'generic',algoVersion=C['version'],frontalize3d=self.frontalize3d,qualityFlags=dict(self.quality_flags),reliability=dict(usableSlots=len(slots),totalSlots=C['coverageSlots'],usableWindows=len(values),totalWindows=count,consistentWindows=len(assigned['rows']),consensusFraction=assigned['fraction'],consensusHalfDifference=assigned['difference'],poseSpeedVariability=variability,rejectionReasons=self.reasons,ruleVersion=C['version']))

@@ -3,7 +3,7 @@ import canonical from './faceReference.json' with {type:'json'};
 import {geometry,FixedIndex} from './liveIndex.js';
 import {median,mad} from './scanReliability.js';
 
-// Provisional, predeclared. Production adoption requires evaluate_tolerance.py.
+// Fixed engineering policy. Live rollout does not constitute empirical validation.
 export const TOLERANCE_CONFIG=Object.freeze(config);
 const C=TOLERANCE_CONFIG,clamp=v=>Math.max(0,Math.min(1,v));
 const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
@@ -46,8 +46,11 @@ export function frameWeight({points=[],faceCount=0,brightness,pose,speed=null,wi
 }
 export function featureMask(row,pose,frontalized=false){
   const out={...row};
-  if(row.mar>C.mouthMax){out.lip_press=null;out.lip_corner=null;}
+  const mouthOpen=row.mar>C.mouthMax;
+  const smileLike=row.lip_corner<C.smileMask;
+  if(mouthOpen||smileLike){out.lip_press=null;out.lip_corner=null;}
   if(!frontalized&&pose&&Math.abs(pose[1])>C.jawYawMax)out.jaw_clench=null;
+  out.mouthMasked=mouthOpen||smileLike;
   return out;
 }
 export function frontalize(points,matrix){
@@ -80,7 +83,9 @@ export class LandmarkFilter{
   }
 }
 export function adaptiveState(elapsed,coverage){
-  return{state:elapsed>=C.maxDuration||(elapsed>=C.duration&&coverage>=C.normalCoverage)?'analyzing':'countdown',extended:elapsed>=C.duration,progress:Math.min(1,elapsed/(elapsed>=C.duration&&coverage<C.normalCoverage?C.maxDuration:C.duration)),capped:elapsed>=C.maxDuration};
+  const canExtend=C.maxDuration>C.duration;
+  const extended=canExtend&&elapsed>=C.duration;
+  return{state:elapsed>=C.maxDuration||(elapsed>=C.duration&&coverage>=C.normalCoverage)?'analyzing':'countdown',extended,progress:Math.min(1,elapsed/(extended&&coverage<C.normalCoverage?C.maxDuration:C.duration)),capped:elapsed>=C.maxDuration};
 }
 export function resultTier(points,coverage){
   const scored=points.filter(p=>Number.isFinite(p.value));const values=scored.map(p=>p.value),center=median(values);
@@ -119,7 +124,7 @@ export class TolerantScan{
     const smooth=this.filter.update(['no_face','multiple_faces','tracking'].includes(quality.reason)?[]:normalized,time).map(p=>[p[0]*width,p[1]*height,p[2]*width]);
     let row=null;
     if(quality.weight>0&&smooth.length){try{const corrected=this.frontalize3d?frontalize(smooth,context.matrix):{points:smooth,applied:false};row=featureMask(geometry(corrected.points),pose,corrected.applied);}catch{}}
-    const flags={lowLight:quality.reason==='too_dark',tooFar:quality.reason==='too_far',tooClose:quality.reason==='too_close',moving:quality.factors?.speed<1,multipleFaces:quality.reason==='multiple_faces',mouthOpen:row?.mar>C.mouthMax,pose:quality.factors?.pose<1};
+    const flags={lowLight:quality.reason==='too_dark',tooFar:quality.reason==='too_far',tooClose:quality.reason==='too_close',moving:quality.factors?.speed<1,multipleFaces:quality.reason==='multiple_faces',mouthOpen:!!row?.mouthMasked,pose:quality.factors?.pose<1};
     for(const [key,value] of Object.entries(flags))this.qualityFlags[key]||=!!value;
     this.observations.push({time,weight:row?quality.weight:0,pose:pose?Math.max(Math.abs(pose[0]),Math.abs(pose[1])):null,speed});
     if(time>=C.settling){
@@ -146,6 +151,7 @@ export class TolerantScan{
       points.push({window,time:window+1.5,value,featuresUsed:Number.isFinite(value)?used:0});
     }
     const coverage=this.coverage(),assigned=resultTier(points,coverage),none=assigned.tier==='NONE';
+    const consensusWindowMask=points.map(point=>assigned.rows.some(row=>row.window===point.window));
     const average=none?null:median(assigned.rows.map(p=>p.value)),values=points.map(p=>p.value).filter(Number.isFinite);
     const spread=values.length?Math.max(C.rangeFloor,C.madScale*mad(values))*(assigned.tier==='LIMITED'?C.limitedWiden:1):null;
     const poses=this.observations.map(r=>r.pose).filter(Number.isFinite),speeds=this.observations.map(r=>r.speed).filter(Number.isFinite);
@@ -154,6 +160,7 @@ export class TolerantScan{
     const top=Object.entries(this.reasons).sort((a,b)=>b[1]-a[1])[0]?.[0]||'no_face';
     const failures={no_face:'No face was tracked. Keep your face in the circle and retry.',multiple_faces:'More than one face was visible. Scan with one person in view.',too_dark:'Your face was too dark. Face a light source and retry.',too_bright:'Your face was overexposed. Reduce bright light and retry.',too_far:'Your face was too far away. Move closer and retry.',too_close:'Your face was too close. Move back and retry.',turned_away:'Your face was turned away. Face the camera and retry.',movement:'Too much movement obscured the landmarks. Make smaller movements and retry.',tracking:'The landmarks could not be tracked. Keep your face visible and retry.'};
     const failReason=none?(values.length>=C.limitedWindows?'The readings did not agree enough. Keep a similar expression and retry.':failures[top]):'';
-    return{average,latest:none?null:points.at(-1)?.value??null,tier:assigned.tier,status:none?'failed':assigned.tier==='LIMITED'?'limited':'ok',quality:none?'poor':assigned.tier==='LIMITED'?'limited':'good',confidence,range:none?null:[Math.max(0,average-spread),Math.min(10,average+spread)],warnings:assigned.tier==='LIMITED'?['Movement or expressions reduced reliability']:[],reason:failReason||(assigned.tier==='LIMITED'?'Movement or expressions reduced reliability':''),failReason,reasonCode:none?top:'',points,windowScores:points.map(p=>p.value),windowFeaturesUsed:points.map(p=>p.featuresUsed),effectiveCoverage:coverage,coveragePercent:coverage*100,features:rows.length?Object.fromEntries(C.features.map(k=>[k,median(rows.map(r=>r[k]).filter(Number.isFinite))])):null,featureStats:rows.length?Object.fromEntries(C.features.map(k=>{const a=rows.map(r=>r[k]).filter(Number.isFinite);return[k,{median:median(a),mad:mad(a)}];})):null,mode:this.baseline?'baseline':'generic',algoVersion:C.version,frontalize3d:this.frontalize3d,qualityFlags:{...this.qualityFlags},reliability:{usableSlots:slots.size,totalSlots:C.coverageSlots,usableWindows:values.length,totalWindows:count,consensusFraction:assigned.fraction,consensusHalfDifference:assigned.difference,poseSpeedVariability:variability,rejectionReasons:this.reasons,ruleVersion:C.version}};
+    const settled=this.observations.filter(row=>row.time>=C.settling),validFrames=settled.filter(row=>row.weight>0).length;
+    return{average,latest:none?null:points.at(-1)?.value??null,tier:assigned.tier,status:none?'failed':assigned.tier==='LIMITED'?'limited':'ok',quality:none?'poor':assigned.tier==='LIMITED'?'limited':'good',confidence,range:none?null:[Math.max(0,average-spread),Math.min(10,average+spread)],warnings:assigned.tier==='LIMITED'?['Movement or expressions reduced reliability']:[],reason:failReason||(assigned.tier==='LIMITED'?'Movement or expressions reduced reliability':''),failReason,reasonCode:none?top:'',points,windowScores:points.map(p=>p.value),windowFeaturesUsed:points.map(p=>p.featuresUsed),consensusWindowMask,effectiveCoverage:coverage,coveragePercent:coverage*100,coverageDetails:{version:'weighted-coverage-1',scope:'Processed observations and weighted 0.2-second slots after the settling second.',observedFrames:settled.length,validFrames,validFramePercent:settled.length?100*validFrames/settled.length:null,occupiedSlots:slots.size,totalSlots:C.coverageSlots,timeSlotOccupancyPercent:100*slots.size/C.coverageSlots},features:rows.length?Object.fromEntries(C.features.map(k=>[k,median(rows.map(r=>r[k]).filter(Number.isFinite))])):null,featureStats:rows.length?Object.fromEntries(C.features.map(k=>{const a=rows.map(r=>r[k]).filter(Number.isFinite);return[k,{median:median(a),mad:mad(a)}];})):null,mode:this.baseline?'baseline':'generic',algoVersion:C.version,frontalize3d:this.frontalize3d,qualityFlags:{...this.qualityFlags},reliability:{usableSlots:slots.size,totalSlots:C.coverageSlots,usableWindows:values.length,totalWindows:count,consistentWindows:assigned.rows.length,consensusFraction:assigned.fraction,consensusHalfDifference:assigned.difference,poseSpeedVariability:variability,rejectionReasons:this.reasons,ruleVersion:C.version}};
   }
 }

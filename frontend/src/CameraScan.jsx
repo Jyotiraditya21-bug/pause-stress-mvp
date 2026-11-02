@@ -112,7 +112,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
     r.finishing=true;setState('analyzing');cancelLoop(r);
     const outcome=r.scan.index.finish(tolerant&&capped?TOLERANCE_CONFIG.maxDuration:r.scan.elapsed);
     const wall=(performance.now()-r.scan.wallStart)/1000;
-    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:tolerant?'quick-tolerant-index-v1':'quick-canonical-index-v3',...outcome,
+    const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:tolerant?'robust-10s-index-v2':'quick-canonical-index-v3',...outcome,
       status:outcome.status,mode:calibrating?'calibration':outcome.mode,baselineId:baseline?.id||baseline?.createdAt||null,acquisitionVersion:prospective?'capture-clock-prospective-1':'capture-clock-1',frames:r.scan.total,validFrames:r.scan.valid,
       durationSeconds:wall,capped,performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(wall,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
     if(new URLSearchParams(location.search).get('diagnostics')!=='1')delete summary.windowDiagnostics;

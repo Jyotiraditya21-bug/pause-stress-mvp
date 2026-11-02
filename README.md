@@ -12,7 +12,7 @@ A browser-based facial check-in with a light interface, a short camera scan, and
 
 ## Branch status
 
-The live site deploys from `main` after browser and offline checks pass. The provisional tolerant acquisition policy remains opt-in; deployment does not enable it by default.
+The live site deploys from `main` after browser and offline checks pass. The fixed 10-second movement-tolerant acquisition policy is the current browser default. It is an engineering safeguard, not evidence that the index measures stress.
 
 See the [release-readiness record](docs/RELEASE_READINESS.md) for implemented safeguards, actual checks and remaining validation requirements.
 
@@ -26,7 +26,7 @@ See the [release-readiness record](docs/RELEASE_READINESS.md) for implemented sa
 
 The interface uses responsive layouts, accessible focus states, gentle motion, and a reduced-motion alternative. The PWA can initialize a scan offline after its app and model assets have been cached.
 
-Standard mode captures a fixed ten seconds after positioning; rejected frames and dropped frames stay missing on the actual capture clock. Camera/model setup takes additional time, with a 25-second cap after initialization if positioning or capture cannot finish. Experimental tolerant mode is visibly labeled and may extend capture to twenty seconds.
+The scan captures a fixed ten seconds after positioning. Its first second is settling time; the remaining nine one-second windows retain real missing intervals rather than holding or inventing observations. Camera/model setup takes additional time.
 
 History separates algorithms, acquisition versions, and personal-baseline identities instead of connecting incompatible results. Damaged records are skipped safely; explicit recovery backs up the original data in this browser before retaining valid scans. Recovery backups can be removed separately in Settings. Older personalized scans without baseline identity remain separate.
 
@@ -63,12 +63,11 @@ MediaPipe is the pretrained computer-vision component. The index itself uses a f
 
 | Mode | Reference | Features |
 | --- | --- | --- |
-| Generic, default | Fixed canonical face | Brow furrow, lip press, lip corner |
+| Movement-tolerant, default | Fixed canonical face | Brow furrow, lip press, lip corner and jaw geometry; mouth/jaw features are masked when their evidence is confounded |
 | Personal baseline | Optional calm scan; feature median/MAD | The three generic features plus jaw geometry |
-| Tolerant experiment, opt-in | Original four-feature canonical formula or personal baseline | Soft acquisition weights, individual feature masks, smoothing, 10–20 second capture |
 | Optional acted-expression comparison, enabled by default | MobileNetV3-Large ONNX model soup | MediaPipe eye/nose alignment, up to 5 fps, trimmed probability mean, 100% on-device WebAssembly; does not set the visible index |
 
-Personal baselines expire after 30 days and are versioned. The tolerant experiment is available at [`?tolerance=1`](http://127.0.0.1:5173/?tolerance=1); it remains off by default until its fixed evaluation criteria pass. Optional 3-D frontalization is also off. See [the tolerance protocol](docs/TOLERANCE.md). The optional neural comparator is enabled by default and can be turned off in Settings; saved choices are respected. It can also be explicitly enabled via [`?ml=1`](http://127.0.0.1:5173/?ml=1). It runs on-device in WebAssembly and falls back cleanly to geometry if unavailable.
+Personal baselines expire after 30 days and are versioned. The default scan uses timestamp-based One Euro smoothing, soft acquisition weights, feature-level masking and one-second consensus. Seven agreeing windows produce the normal tier; five may produce a visibly limited-confidence result; no dominant cluster produces no number. Optional 3-D frontalization remains off. See [the tolerance protocol](docs/TOLERANCE.md). The optional neural comparator is enabled by default and can be turned off in Settings; saved choices are respected. It can also be explicitly enabled via [`?ml=1`](http://127.0.0.1:5173/?ml=1). It runs on-device in WebAssembly and falls back cleanly to geometry if unavailable.
 
 The neural artifact is an equal-weight average of six actor-disjoint MobileNetV3-Large checkpoints trained on RAVDESS acted expressions. The source checkpoints achieved pooled ROC-AUC 0.906 (actor-cluster 95% CI 0.860–0.959), 79.39% accuracy and 78.88% balanced accuracy across 1,344 videos. Those figures do **not** evaluate the averaged artifact, current perceived stress, live-camera repeatability or the visible Calm index. No universal production threshold has been established.
 

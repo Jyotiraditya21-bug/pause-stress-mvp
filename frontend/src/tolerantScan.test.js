@@ -23,6 +23,7 @@ test('mouth mask preserves brow and frontalization controls the jaw yaw mask',()
   const row={...geometry(fixtureFace()),mar:.5};
   const mask=featureMask(row,[0,30,0]);assert.equal(mask.brow_furrow,row.brow_furrow);assert.equal(mask.lip_press,null);assert.equal(mask.lip_corner,null);assert.equal(mask.jaw_clench,null);
   assert.equal(featureMask(row,[0,30,0],true).jaw_clench,row.jaw_clench);
+  const smile=featureMask({...row,mar:.1,lip_corner:-.13},[0,0,0]);assert.equal(smile.lip_press,null);assert.equal(smile.lip_corner,null);assert.equal(smile.brow_furrow,row.brow_furrow);assert.equal(smile.mouthMasked,true);
 });
 test('two features required; talking keeps brow and jaw; NONE never exposes a number',()=>{
   const scan=new TolerantScan();assert.equal(scan.score({brow_furrow:0}),null);assert.ok(Number.isFinite(scan.score({brow_furrow:0,jaw_clench:1})));
@@ -30,19 +31,25 @@ test('two features required; talking keeps brow and jaw; NONE never exposes a nu
   const result=scan.finish();assert.ok(result.windowFeaturesUsed.every(n=>n===2));assert.notEqual(result.average,null);
   const empty=new TolerantScan().finish();assert.equal(empty.tier,'NONE');assert.equal(empty.average,null);assert.equal(empty.range,null);
 });
-test('adaptive duration extends after ten, stops when coverage reaches target, caps at twenty',()=>{
-  assert.equal(adaptiveState(9.9,1).state,'countdown');assert.equal(adaptiveState(10,.59).extended,true);assert.equal(adaptiveState(10,.59).state,'countdown');assert.equal(adaptiveState(13,.6).state,'analyzing');assert.equal(adaptiveState(20,0).capped,true);
+test('production scan ends at ten seconds without extending',()=>{
+  assert.equal(adaptiveState(9.9,1).state,'countdown');assert.equal(adaptiveState(10,.59).state,'analyzing');assert.equal(adaptiveState(10,.59).extended,false);assert.equal(adaptiveState(10,0).capped,true);assert.equal(C.duration,10);assert.equal(C.maxDuration,10);
 });
 test('constructed series assign NORMAL LIMITED and NONE without imputation',()=>{
   const points=Array.from({length:9},(_,window)=>({window,value:5}));
-  assert.equal(resultTier(points,.6).tier,'NORMAL');assert.equal(resultTier(points,.2).tier,'LIMITED');assert.equal(resultTier(points,.14).tier,'NONE');
+  assert.equal(resultTier(points,.6).tier,'NORMAL');assert.equal(resultTier(points,.4).tier,'LIMITED');assert.equal(resultTier(points,.39).tier,'NONE');
   assert.equal(resultTier(points.slice(0,8).map(p=>({...p,value:p.window<4?1:9})),1).tier,'NONE');
+});
+test('majority consensus requires seven windows for normal and five for limited',()=>{
+  const series=values=>values.map((value,window)=>({window,value}));
+  assert.equal(resultTier(series([5,5,5,5,5,5,5,9,9]),1).tier,'NORMAL');
+  assert.equal(resultTier(series([5,5,5,9,9,5,5,9,9]),1).tier,'LIMITED');
+  assert.equal(resultTier(series([5,5,5,5,7,9,9,9,9]),1).tier,'NONE');
 });
 test('One Euro reduces jitter; face-loss reset and missing transform fallback are deterministic',()=>{
   const filter=new OneEuro(),raw=Array.from({length:100},(_,i)=>1+.01*(i%2?1:-1));const smooth=raw.map((v,i)=>filter.update(v,i/10));
   const variance=a=>a.reduce((s,v)=>s+(v-1)**2,0)/a.length;assert.ok(variance(smooth.slice(10))<variance(raw.slice(10)));
   const landmarks=new LandmarkFilter();landmarks.update([[1,1,0]],0);landmarks.update([],1);assert.deepEqual(landmarks.update([[2,2,0]],1.1),[[2,2,0]]);
-  const p=fixtureFace();assert.deepEqual(frontalize(p,null),{points:p,applied:false});assert.equal(C.frontalize3d,false);assert.equal(C.adopted,false);
+  const p=fixtureFace();assert.deepEqual(frontalize(p,null),{points:p,applied:false});assert.equal(C.frontalize3d,false);assert.equal(C.adopted,true);
 });
 test('coverage uses weighted slots and extension adds evidence, never repeats or holds scores',()=>{
   const scan=new TolerantScan(),p=fixtureFace();
@@ -56,8 +63,10 @@ test('gaps remain missing and LIMITED has the prescribed wider MAD range',()=>{
   for(const r of fixture.frames)scan.update(r.time,r.points,r.pose,true,r.context);
   const result=scan.finish();assert.equal(result.windowScores[3],null);assert.equal(result.windowScores[4],null);
   const limited=new TolerantScan();
-  for(const r of fixture.frames)limited.update(r.time,r.points,[0,40,0],true,r.context);
+  for(const r of fixture.frames)limited.update(r.time,r.points,[0,32,0],true,r.context);
   // At high yaw jaw is masked, but three other features can remain valid.
   const low=limited.finish();assert.equal(low.tier,'LIMITED');assert.ok(Math.abs(low.range[1]-low.average-.6)<1e-6);
   assert.equal(low.warnings[0],'Movement or expressions reduced reliability');
+  assert.equal(low.consensusWindowMask.filter(Boolean).length,low.reliability.consistentWindows);
+  assert.equal(low.coverageDetails.observedFrames,fixture.frames.filter(r=>r.time>=C.settling).length);
 });

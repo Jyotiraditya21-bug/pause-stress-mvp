@@ -48,7 +48,7 @@ test('cancel releases the video element',async({page})=>{
 
 test('fake-camera scan reaches a result or a clear failed state',async({page})=>{
   await onboard(page);await page.goto('/');await page.getByRole('button',{name:'Start 10-second scan'}).click();
-  await expect(page.getByText(/We couldn't get a reading|Calm signs|In between|Tense signs/)).toBeVisible({timeout:35000});
+  await expect(page.getByText(/We couldn't get a reliable reading|Calm signs|In between|Tense signs/)).toBeVisible({timeout:35000});
 });
 
 test('result can be saved, viewed accessibly, and deleted from History',async({page})=>{

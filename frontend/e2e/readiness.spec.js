@@ -30,11 +30,11 @@ test('damaged history is recoverable without losing valid records',async({page})
   await expect(page.getByText('No saved scans yet.',{exact:false})).toBeVisible();
 });
 
-test('experimental mode and variable duration are visible before permission',async({page})=>{
+test('experimental movement-tolerant fixed duration is visible before permission',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
   await page.goto('/?tolerance=1');
-  await expect(page.getByText(/Experimental movement-tolerant mode/)).toBeVisible();
-  await expect(page.getByText(/10–20 seconds/)).toBeVisible();
+  await expect(page.getByText(/Experimental 10-second movement-tolerant capture/)).toBeVisible();
+  await expect(page.getByText('10 sec',{exact:true})).toBeVisible();
 });
 
 for(const viewport of [{width:390,height:844},{width:360,height:640}]){
@@ -59,6 +59,15 @@ test('trends do not join different baselines and use elapsed date spacing',async
   await expect(page.getByRole('img',{name:'Saved Calm index trend by date'})).toHaveCount(2);
   const xs=await page.locator('.history-trend').first().locator('circle').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('cx'))));
   expect((xs[1]-xs[0])/(xs[2]-xs[0])).toBeCloseTo(.1);
+});
+
+test('history identifies the robust ten-second acquisition',async({page})=>{
+  await page.addInitScript(()=>{
+    localStorage.setItem('pause.onboarded.v1','1');
+    localStorage.setItem('pause-camera-sessions-v2',JSON.stringify([{id:'robust',average:5.5,created_at:'2026-11-01T00:00:00Z',mode:'generic',source:'robust-10s-index-v2',algoVersion:'robust-10s-2.0',acquisitionVersion:'capture-clock-1'}]));
+  });
+  await page.goto('/');await page.getByRole('button',{name:'History',exact:true}).click();
+  await expect(page.getByText(/Movement-tolerant scan/)).toBeVisible();
 });
 
 

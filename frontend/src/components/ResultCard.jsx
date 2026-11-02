@@ -56,25 +56,31 @@ function Trend({ windows, excluded=[] }) {
 export default function ResultCard({ status, score, windows = [], reason, warnings = [], consensusMask, coverageDetails, onRetry, onDone, caption, actions, children }) {
   const transparency=windowTransparency(windows,consensusMask);
   coverageDetails=normalizeCoverageDetails(coverageDetails);
+  const usable=windows.filter((v)=>v!=null).length;
+  const agreeing=Array.isArray(consensusMask)?consensusMask.filter(Boolean).length:null;
   const coverage=<section className="pz-panel"><h3>Acquisition details</h3>{coverageDetails?<>
     <p>Valid processed observations: {coverageDetails.validFramePercent==null?'Unavailable':`${coverageDetails.validFramePercent.toFixed(1)}%`} ({coverageDetails.validFrames}/{coverageDetails.observedFrames}).</p>
     <p>Time-slot occupancy: {coverageDetails.timeSlotOccupancyPercent.toFixed(1)}% ({coverageDetails.occupiedSlots}/{coverageDetails.totalSlots}).</p>
     <p>Counts cover processed observations after the first second, not every camera frame. Slot occupancy does not measure accuracy.</p>
   </>:<p>Observation-validity counts were not recorded for this saved scan. Legacy coverage is not a valid-frame percentage.</p>}</section>;
-  if (status === "failed" || score == null) return <main className="pz-result">
-    <section className="pz-fail" aria-live="polite"><h2>We couldn't get a reading</h2><p>{reason || "The camera didn't see your face clearly enough for long enough."}</p><p>Face a light source, keep your whole face in the circle, and stay still for 10 seconds.</p></section>
+  if (status === "failed" || score == null) {
+    const conflict=/agree|conflict|expression/i.test(reason||'');
+    return <main className="pz-result">
+    <section className="pz-fail" aria-live="polite"><h2>We couldn't get a reliable reading</h2><p>{reason || "The camera didn't see your face clearly enough for long enough."}</p><p>{conflict?'Your face was captured, but no single facial state dominated. Small movements are okay; avoid speaking or deliberately changing expression during the next scan.':'Face a steady light source and keep your whole face in the circle for the 10-second scan.'}</p></section>
     <div className="pz-actions"><button className="pz-btn pz-btn-primary" onClick={onRetry}>Scan again</button></div>
+    {usable>0&&<section className="pz-panel"><h3>Why this scan was withheld</h3><p>{agreeing==null?`${usable} one-second windows were measured.`:`${agreeing} of ${usable} measured windows belonged to the largest agreeing group.`} A result is shown only when at least half form a coherent state across the scan.</p><Trend windows={windows} excluded={transparency.excluded||[]}/></section>}
     {coverage}
     {children}
   </main>;
+  }
 
-  const band = bandFor(score), limited = status === "limited", usable = windows.filter((v) => v != null).length;
+  const band = bandFor(score), limited = status === "limited";
   return <main className="pz-result">
     <Gauge score={score} tone={band.tone} />
     <div className={`pz-tone-${band.tone}`} style={{ textAlign: "center" }}><div className="pz-band">{band.label}</div></div>
     <p className="pz-meaning">{band.note}</p>
     {caption}
-    <div className={`pz-chip ${limited ? "is-limited" : ""}`}><i aria-hidden="true" />{limited ? "Acquisition limitations" : "Acquisition checks passed"} · {usable} of {windows.length || 9} windows measured</div>
+    <div className={`pz-chip ${limited ? "is-limited" : ""}`}><i aria-hidden="true" />{limited ? "Limited confidence" : "Acquisition checks passed"} · {agreeing??usable} of {usable} measured windows agreed</div>
     <section className="pz-panel"><h3>During your scan</h3><p>Each point is one second. The dashed line is the reference midpoint.</p><Trend windows={windows} excluded={transparency.excluded||[]} />
       {transparency.observedRange&&<p>Full observed window range: {transparency.observedRange[0].toFixed(1)}–{transparency.observedRange[1].toFixed(1)}.</p>}
       <p>{transparency.excluded===null?'Excluded-window positions were not recorded for this saved scan.':transparency.excluded.length?`Windows excluded from the final score: ${transparency.excluded.join(', ')} (outlined on the graph). Their measurements remain visible.`:'No measured windows were excluded from the final score.'}</p>

@@ -342,7 +342,18 @@ See VALIDATION.md for verified checks and remaining input-dependent work. Model 
 - [x] Add `docs/TOLERANCE.md`, manifest schema, run commands and implementation definitions. Existing tests encoding strict gates remain unchanged; new tests live in `tolerantScan.test.js`, `test_tolerance.py`, `test_tolerance_evaluation.py` and `e2e/tolerance.spec.js`.
 - [x] Verification: 37 frontend tests passed; production PWA build passed. Python full discovery ran 41 tests: 40 passed, one optional Torch/Transformers smoke test skipped; affected tolerance tests were rerun after final edits. Browser suite: 12 passed, one separately configured offline test skipped; includes both tolerant cap/NONE and cancel cleanup checks.
 - [x] Actual bundled MediaPipe Tasks model decoded a temporary blank video outside the sandbox. Full evaluator smoke on a 20-second blank recording returned NONE/no score for OLD, NEW and NEW_3D and FAIL adoption, with no extraction failures. Sandbox-only execution cannot create NSOpenGL; no real participant video was used.
-- [ ] Authorized still/natural_movement/talking/smiling/glasses/low_light repeated recordings and UBFC-Phys data are absent. No empirical acceptance, AUC improvement or repeatability claim is made. `adopted=false` and `frontalize3d=false` remain in the shared configuration.
+- [ ] Authorized still/natural_movement/talking/smiling/glasses/low_light repeated recordings and UBFC-Phys data are absent. No empirical acceptance, AUC improvement or repeatability claim is made. The later 2026-11-01 engineering rollout set `adopted=true`; `frontalize3d=false` remains unchanged.
+
+## Fixed 10-second robust consensus — 2026-11-01
+
+- [x] Make the movement-tolerant pipeline the browser default while preserving an exact 10-second capture and first-second exclusion; remove the earlier 20-second extension behavior.
+- [x] Keep timestamp-based One Euro smoothing and soft frame evidence. Mask lip features for open-mouth and strong smile-like observations and jaw geometry at high yaw without discarding usable brow evidence.
+- [x] Aggregate into nine one-second windows. Require seven agreeing windows for NORMAL, allow five for visibly LIMITED confidence, and emit no score when no dominant early/late-consistent cluster exists.
+- [x] Show the agreeing-window count, measured range/graph and a specific withheld-result explanation. Add processed-observation and occupied-slot denominators after settling.
+- [x] Preserve optional personal calibration and the non-diagnostic claim boundary. No improvement in accuracy, AUC, repeatability or clinical validity is claimed without participant evidence.
+- [x] Keep the JavaScript and Python implementations in recursive parity and add unit coverage for the fixed timer, expression masks, tier boundaries and agreement reporting.
+- [x] Software verification: 63/63 frontend unit tests, production PWA build, JS/Python recursive parity, targeted/full Chromium flows, 8/8 WebKit readiness checks and offline PWA initialization passed. A 390×844 start-button viewport regression found during verification was fixed without changing the visual system.
+- [ ] Complete a physical real-camera smoke before deployment; run the repeatability/nuisance protocol before changing any measurement claim.
 
 ## Light, friendly UI redesign — 2026-10-15
 
