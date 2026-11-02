@@ -7,7 +7,7 @@ export function windowTransparency(windows=[],mask){
 }
 
 export function normalizeCoverageDetails(value){
-  if(!value||value.version!=='coverage-denominators-1')return null;
+  if(!value||(value.version!=='coverage-denominators-1'&&value.version!=='weighted-coverage-1'))return null;
   const {observedFrames,validFrames,occupiedSlots,totalSlots}=value;
   if(![observedFrames,validFrames,occupiedSlots,totalSlots].every(n=>Number.isSafeInteger(n)&&n>=0)||
     totalSlots===0||validFrames>observedFrames||occupiedSlots>totalSlots)return null;
