@@ -54,7 +54,8 @@ const seededSessions = [
 // Start vite dev server on 5199
 const vite = spawn('npx', ['vite', '--port', '5199', '--host', '127.0.0.1'], {
   cwd: path.resolve('frontend'),
-  stdio: 'pipe'
+  stdio: 'pipe',
+  shell: true
 });
 
 await new Promise((resolve) => {
