@@ -16,7 +16,7 @@ const Experiment=lazy(()=>import('./Experiment.jsx'));
 const PrivacyPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.PrivacyPage})));
 const AboutPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.AboutPage})));
 const ONBOARDING_KEY='pause.onboarded.v1';
-const SCREEN_MAP={scan:'Scan',history:'History',settings:'Settings',privacy:'Privacy',about:'About'};
+const SCREEN_MAP={scan:'Scan',history:'History',settings:'Settings',privacy:'Privacy',about:'About',evidence:'About'};
 const versionText=typeof __APP_VERSION__!=='undefined'&&typeof __COMMIT_HASH__!=='undefined'?`v${__APP_VERSION__} · ${__COMMIT_HASH__}`:'v0.1.0';
 
 function wasOnboarded(){try{return localStorage.getItem(ONBOARDING_KEY)==='1'}catch{return false}}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Icon from '../components/Icon.jsx';
 
 const CLAIMS = [
   {
@@ -95,30 +96,22 @@ export function AboutPage(){
         Explore our verified audit achievements, technical architecture, and scientific transparency.
       </p>
 
-      {/* Page Navigation Buttons */}
-      <div style={{display:'flex',gap:'8px',flexWrap:'wrap',margin:'18px 0 16px'}}>
+      {/* Page Navigation Toggle Button */}
+      <div className="main-nav page-toggle-nav" role="tablist" aria-label="Evidence pages">
         {[
-          { id: 'benchmarks', label: '🏆 Verified Benchmarks' },
-          { id: 'architecture', label: '⚙️ System Architecture' },
-          { id: 'transparency', label: '🔬 Scientific Scope & Privacy' }
+          { id: 'benchmarks', icon: 'spark', label: 'Verified Benchmarks' },
+          { id: 'architecture', icon: 'shield', label: 'Architecture' },
+          { id: 'transparency', icon: 'scan', label: 'Scope & Privacy' }
         ].map(tab => (
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
             onClick={() => setActiveTab(tab.id)}
-            className="pz-btn"
-            style={{
-              padding: '8px 16px',
-              minHeight: '40px',
-              fontSize: '13px',
-              borderRadius: '20px',
-              background: activeTab === tab.id ? 'var(--tide)' : 'var(--paper)',
-              color: activeTab === tab.id ? '#fff' : 'var(--ink)',
-              borderColor: activeTab === tab.id ? 'var(--tide)' : 'var(--line)',
-              boxShadow: activeTab === tab.id ? '0 2px 8px #21684f18' : 'none',
-              transition: 'all 150ms var(--ease)'
-            }}
           >
+            <Icon name={tab.icon} size={17} />
             {tab.label}
           </button>
         ))}

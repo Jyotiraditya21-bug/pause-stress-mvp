@@ -42,9 +42,11 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .brand-mark { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 50%; background: var(--mint); }
 .brand-mark i { width: 4px; height: 14px; background: var(--tide); border-radius: 4px; }
 .main-nav { display: flex; padding: 4px; gap: 3px; background: #edf1e9; border: 1px solid #e4eadf; border-radius: 30px; }
-.main-nav button { min-height: 44px; padding: 0 22px; border: 0; border-radius: 24px; color: #5d6e62; background: transparent; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; transition: background 150ms var(--ease), color 150ms var(--ease); }
+.main-nav button { min-height: 44px; padding: 0 22px; border: 0; border-radius: 24px; color: #5d6e62; background: transparent; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 150ms var(--ease), color 150ms var(--ease); }
 .main-nav button:hover:not([aria-current=page]) { background: var(--tide-soft); color: var(--ink); }
 .main-nav button[aria-current=page] { color: var(--ink); background: var(--paper); box-shadow: 0 2px 6px #294b3010; }
+.page-toggle-nav { margin: 18px 0 20px; align-self: flex-start; display: inline-flex; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.page-toggle-nav button { white-space: nowrap; }
 .app-content { flex: 1; }
 .site-footer { width: min(1104px,calc(100% - 56px)); margin: 0 auto; padding: 17px 0 calc(17px + env(safe-area-inset-bottom,0px)); border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .footer-note { color: var(--ink-soft); font-size: 12px; display: inline-flex; align-items: center; gap: 7px; }
@@ -255,6 +257,8 @@ button:active:not(:disabled) { transform: translateY(1px); }
 }
 @media(max-width:380px) {
   .site-header { padding-inline: 16px; }.main-nav button { padding-inline: 11px; }.main-nav button svg { display: none; }
+  .page-toggle-nav { width: 100%; padding: 3px; }
+  .page-toggle-nav button { padding-inline: 8px; font-size: 11px; min-height: 38px; }
   .scan-screen { padding-inline: 16px; }.scan-card { padding: 17px; }.scan-circle { width: 235px; }.scan-screen h1 { font-size: 34px; }
   .scan-card-footnote { font-size: 10px; }.pz-result { padding-inline: 18px; }.result-tools { padding-inline: 18px; }
 }
