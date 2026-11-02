@@ -52,7 +52,7 @@ const expected=process.env.PAUSE_SMOKE_COMMIT;
  await page.unrouteAll({behavior:'wait'});
  report.checks.push('preview before model download completes; cancel stops tracks');
  await page.getByRole('button',{name:'Start 10-second scan'}).click();
- await expect(page.getByText(/We couldn't get a reading/)).toBeVisible({timeout:45000});
+ await expect(page.getByText(/We couldn't get a reliable reading/)).toBeVisible({timeout:45000});
  expect(await page.evaluate(()=>window.smokeStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')))).toBeTruthy();
  report.checks.push('no-face failure without invented score; completion stops tracks');
  // Synthetic derived record only, in a disposable browser profile.
