@@ -17,6 +17,12 @@ function validate(row){
     confidence:Number.isFinite(row.confidence)?Math.max(0,Math.min(1,row.confidence)):0,
     windowFeaturesUsed:Array.isArray(row.windowFeaturesUsed)?row.windowFeaturesUsed.filter(Number.isFinite):[],
     coveragePercent:Number.isFinite(row.coveragePercent)?Math.max(0,Math.min(100,row.coveragePercent)):0,
+    deviceMetrics:row.deviceMetrics&&typeof row.deviceMetrics==='object'?{
+      timeToCameraReadyMs:Number.isFinite(row.deviceMetrics.timeToCameraReadyMs)?row.deviceMetrics.timeToCameraReadyMs:null,
+      timeToLandmarksReadyMs:Number.isFinite(row.deviceMetrics.timeToLandmarksReadyMs)?row.deviceMetrics.timeToLandmarksReadyMs:null,
+      achievedFps:Number.isFinite(row.deviceMetrics.achievedFps)?row.deviceMetrics.achievedFps:null,
+      faceDetectedShare:Number.isFinite(row.deviceMetrics.faceDetectedShare)?row.deviceMetrics.faceDetectedShare:null
+    }:null,
   };
 }
 // Reading never rewrites damaged data. Recovery explicitly backs it up first.

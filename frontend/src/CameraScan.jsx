@@ -112,9 +112,17 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
     r.finishing=true;setState('analyzing');cancelLoop(r);
     const outcome=r.scan.index.finish(tolerant&&capped?TOLERANCE_CONFIG.maxDuration:r.scan.elapsed);
     const wall=(performance.now()-r.scan.wallStart)/1000;
+    const fps=r.scan.allFrames/Math.max(wall,.1);
+    const faceShare=r.scan.allFrames?((r.scan.faceFrames||0)/r.scan.allFrames)*100:0;
+    const deviceMetrics={
+      timeToCameraReadyMs:Math.round(r.cameraReadyMs||0),
+      timeToLandmarksReadyMs:Math.round(r.landmarksReadyMs||0),
+      achievedFps:Number(fps.toFixed(1)),
+      faceDetectedShare:Number(faceShare.toFixed(1))
+    };
     const summary={id:crypto.randomUUID(),created_at:new Date().toISOString(),source:tolerant?'quick-tolerant-index-v1':'quick-canonical-index-v3',...outcome,
       status:outcome.status,mode:calibrating?'calibration':outcome.mode,baselineId:baseline?.id||baseline?.createdAt||null,acquisitionVersion:prospective?'capture-clock-prospective-1':'capture-clock-1',frames:r.scan.total,validFrames:r.scan.valid,
-      durationSeconds:wall,capped,performance:{processedFrames:r.scan.allFrames,fps:r.scan.allFrames/Math.max(wall,.1),inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
+      durationSeconds:wall,capped,deviceMetrics,performance:{processedFrames:r.scan.allFrames,fps,inferenceMs:r.scan.allFrames?r.scan.inferenceSum/r.scan.allFrames:null,processingMs:r.scan.allFrames?r.scan.processingSum/r.scan.allFrames:null}};
     if(new URLSearchParams(location.search).get('diagnostics')!=='1')delete summary.windowDiagnostics;
     if(!tolerant&&capped&&summary.status==='ok'){
       summary.status='limited';summary.quality='limited';summary.warnings=[...summary.warnings,'Keep your face in view so the scan finishes sooner.'];
@@ -158,6 +166,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
       const ctx=r.sampleCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(v,0,0,64,48);
       const pixels=ctx.getImageData(0,0,64,48).data;
       const landmarks=result.faceLandmarks[0];
+      if(landmarks)r.scan.faceFrames=(r.scan.faceFrames||0)+1;
       const brightness=faceBrightness(pixels,64,48,landmarks);
       const pose=headPose(result.facialTransformationMatrixes?.[0]);
       if(tolerant){
@@ -231,6 +240,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
     // Retain button-hover prewarming when starting; all exit paths dispose it.
     stop(false);setError('');setProgress(0);setPaused(false);setExtended(false);setVideoReady(false);setState('permission');setHint('Starting camera…');
     const r=runtime.current;r.starting=true;const isCurrent=()=>mounted.current&&runtime.current===r;
+    const initStartTime=performance.now();r.initStartTime=initStartTime;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support camera access. Use an up-to-date browser on HTTPS.');
       const streamPromise = awaitResource(navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}}),{isCurrent,dispose:stream=>stream.getTracks().forEach(track=>track.stop()),message:'Camera permission is still pending. Allow camera access, then start again.'});
@@ -240,6 +250,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
 
       const stream = await streamPromise;
       if(!isCurrent())return;
+      r.cameraReadyMs=performance.now()-initStartTime;
       r.stream=stream;
       setState('loading');
       r.stream.getVideoTracks().forEach(track=>track.addEventListener('ended',()=>{if(isCurrent()){stop();setState('failed');setError('The camera disconnected. Reconnect it, then start again.');}}));
@@ -254,6 +265,7 @@ export default function CameraScan({onComplete,baseline=null,calibrating=false,m
       const loadedModel=await modelPromise;
       if(!isCurrent())return;
       if(loadedModel.error)throw loadedModel.error;
+      r.landmarksReadyMs=performance.now()-initStartTime;
       r.model=loadedModel.model;
       r.sampleCanvas=document.createElement('canvas');r.sampleCanvas.width=64;r.sampleCanvas.height=48;
       const enableML=new URLSearchParams(location.search).get('ml')==='1'||mlEnabled;

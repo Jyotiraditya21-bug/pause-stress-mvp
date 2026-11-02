@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview",
-    "prebuild": "node scripts/verify-release-assets.mjs",
+    "prebuild": "node scripts/verify-release-assets.mjs && node scripts/generate-evidence.mjs",
     "build": "vite build",
     "test": "node --test src/*.test.js",
     "test:e2e": "playwright test",
