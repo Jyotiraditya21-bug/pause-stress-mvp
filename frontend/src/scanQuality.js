@@ -112,3 +112,4 @@ export function deriveScanQuality({
     explanation: 'Acquisition did not meet minimum stability thresholds.'
   };
 }
+

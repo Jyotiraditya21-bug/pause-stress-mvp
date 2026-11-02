@@ -16,6 +16,8 @@ const Experiment=lazy(()=>import('./Experiment.jsx'));
 const PrivacyPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.PrivacyPage})));
 const AboutPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.AboutPage})));
 const ONBOARDING_KEY='pause.onboarded.v1';
+const SCREEN_MAP={scan:'Scan',history:'History',settings:'Settings',privacy:'Privacy',about:'About'};
+const versionText=typeof __APP_VERSION__!=='undefined'&&typeof __COMMIT_HASH__!=='undefined'?`v${__APP_VERSION__} · ${__COMMIT_HASH__}`:'v0.1.0';
 
 function wasOnboarded(){try{return localStorage.getItem(ONBOARDING_KEY)==='1'}catch{return false}}
 function setOnboarded(){try{localStorage.setItem(ONBOARDING_KEY,'1')}catch{}}
@@ -47,7 +49,13 @@ function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline
 function App(){
   const lab=new URLSearchParams(location.search).get('lab')==='1';
   const fixture=import.meta.env.DEV&&new URLSearchParams(location.search).get('fixture')==='result'?{id:'e2e-result',created_at:'2026-01-01T00:00:00.000Z',average:6.2,status:'ok',quality:'good',mode:'generic',algoVersion:'quick-2.0',range:[5.8,6.6],windowScores:[6,6.1,6.2,6.3,6.2,6.1,6.2,6.3,6.4],coveragePercent:100,qualityFlags:{},coverageDetails:{version:'weighted-coverage-1',scope:'Processed observations after the first second; not all camera frames.',observedFrames:90,validFrames:88,occupiedSlots:45,totalSlots:45},deviceMetrics:{timeToCameraReadyMs:240,timeToLandmarksReadyMs:410,achievedFps:10.2,faceDetectedShare:98.5}}:null;
-  const [screen,setScreen]=useState(()=>fixture?'Result':wasOnboarded()?'Scan':'Onboarding');
+  const [announcement,setAnnouncement]=useState('');
+  const [screen,setScreen]=useState(()=>{
+    if(fixture)return 'Result';
+    if(!wasOnboarded())return 'Onboarding';
+    const hash=location.hash.replace(/^#/,'').toLowerCase();
+    return SCREEN_MAP[hash]||'Scan';
+  });
   const [result,setResult]=useState(fixture),[calibrating,setCalibrating]=useState(false);
   const [baseline,setBaselineState]=useState(()=>readBaseline());
   const [mlEnabled,setMlEnabled]=useState(()=>{try{return localStorage.getItem('pause.ml.enabled')==='1'}catch{return false}});
@@ -58,7 +66,39 @@ function App(){
   useEffect(()=>{
     initializeMonitoring().catch(()=>{});registerSW({immediate:false});
   },[]);
-  const navigate=(next,{calibration=false}={})=>{setCalibrating(calibration);if(next==='Scan')setBaselineState(readBaseline());setScreen(next);setNotice('');setError('')};
+  const navigate=(next,{calibration=false,syncHash=true}={})=>{
+    setCalibrating(calibration);
+    if(next==='Scan')setBaselineState(readBaseline());
+    setScreen(next);
+    setNotice('');
+    setError('');
+    if(syncHash&&next!=='Result'){
+      const hash=`#${next.toLowerCase()}`;
+      if(location.hash!==hash)window.history.pushState(null,'',hash);
+    }
+  };
+
+  useEffect(()=>{
+    const onHashChange=()=>{
+      if(!wasOnboarded())return;
+      const hash=location.hash.replace(/^#/,'').toLowerCase();
+      const target=SCREEN_MAP[hash];
+      if(target&&target!==screen)navigate(target,{syncHash:false});
+    };
+    window.addEventListener('hashchange',onHashChange);
+    window.addEventListener('popstate',onHashChange);
+    return()=>{
+      window.removeEventListener('hashchange',onHashChange);
+      window.removeEventListener('popstate',onHashChange);
+    };
+  },[screen]);
+
+  useEffect(()=>{
+    const h1=document.querySelector('.app-content h1');
+    if(h1){
+      setAnnouncement(`Navigated to ${h1.textContent}`);
+    }
+  },[screen]);
   function complete(session){
     const completeBaseline=['brow_furrow','lip_press','lip_corner','jaw_clench'].every(k=>Number.isFinite(session.featureStats?.[k]?.median)&&Number.isFinite(session.featureStats?.[k]?.mad));
     if(calibrating&&session.status!=='failed'&&completeBaseline){
@@ -76,11 +116,13 @@ function App(){
   function clearBaseline(){if(resetBaseline()){setBaselineState(null);setNotice('Your calm baseline was reset.')}else setError('The baseline could not be reset. Check browser storage settings, then try again.')}
   const saved=!!result&&sessions.some(row=>row.id===result.id);
   return <div className="app-shell">
+    <a href="#main-content" className="skip-link">Skip to main content</a>
+    <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
     <header className="site-header"><button className="brand" onClick={()=>navigate('Scan')} aria-label="Pause home"><span className="brand-mark" aria-hidden="true"><i/><i/></span>pause</button><nav className="main-nav" aria-label="Primary"><button aria-current={screen==='Scan'?'page':undefined} onClick={()=>navigate('Scan')}><Icon name="scan" size={17}/>Scan</button><button aria-current={screen==='History'?'page':undefined} onClick={()=>navigate('History')}><Icon name="history" size={17}/>History</button>{lab&&<button aria-current={screen==='Lab'?'page':undefined} onClick={()=>navigate('Lab')}>Lab</button>}</nav></header>
     {notice&&<p className="notice" role="status">{notice}</p>}{error&&<p className="error-banner" role="alert">{error}</p>}
     {(storageState.unreadable||storageState.invalidCount>0)&&<section className="notice" aria-label="History recovery"><p>Some saved history could not be read. Valid scans are still available. Recover history to back up the original data on this device and enable saving and deleting again.</p><button className="pz-btn pz-btn-quiet" onClick={recoverHistory}>Recover saved history</button></section>}
     {new URLSearchParams(location.search).get('study')==='1'&&new URLSearchParams(location.search).get('policy')==='prospective-1'&&<GuidedStudy result={result} onStart={()=>navigate('Scan')}/>}
-    <div className="app-content"><Suspense key={screen} fallback={<main className="page"><p>Loading…</p></main>}>
+    <div className="app-content" id="main-content"><Suspense key={screen} fallback={<main className="page"><p>Loading…</p></main>}>
       {screen==='Onboarding'&&<main className="page onboarding"><h1>A quiet moment to check in</h1><p>Pause gives you an experimental Calm index after a 10-second camera scan. Processing stays on your device, and the result cannot tell how stressed you feel.</p><button className="pz-btn pz-btn-primary" onClick={()=>{setOnboarded();navigate('Scan')}}>Continue to scan</button></main>}
       {screen==='Scan'&&<ScanScreen mlEnabled={mlEnabled} onComplete={complete} baseline={calibrating?null:baseline} calibrating={calibrating}/>}
       {screen==='Result'&&result&&<ResultScreen result={result} isSaved={saved} onRetry={()=>navigate('Scan')} onDone={()=>navigate('History')} onSave={save} onCalibrate={startCalibration} baseline={baseline}/>}
@@ -88,7 +130,7 @@ function App(){
       {screen==='Settings'&&<main className="page settings"><h1>Settings</h1><section className="pz-panel"><h2>Personal baseline</h2><p>Calibrate when calm so future scores compare you with your own calm face.</p><button className="pz-btn pz-btn-primary" onClick={startCalibration}>{baseline?'Recalibrate when calm':'Calibrate when calm'}</button>{baseline&&<button className="pz-btn pz-btn-quiet" onClick={clearBaseline}>Reset baseline</button>}</section><section className="pz-panel"><h2>Experimental Neural Model (MobileNetV3)</h2><p>Research comparator. Does not change your Calm index. Downloads ~17 MB.</p><button className={`pz-btn ${mlEnabled?'pz-btn-primary':'pz-btn-quiet'}`} role="switch" aria-label="Experimental neural model" aria-checked={mlEnabled} onClick={toggleML}>{mlEnabled?'Turn neural model off':'Turn neural model on'}</button><p className="note" style={{marginTop:'0.5rem',fontSize:'0.82rem',color:'#717672'}}>Statistical facial pattern recognition only. Training-image provenance and redistribution rights remain unknown. Image accuracy does not establish live stress accuracy. Not a medical measurement or clinical stress diagnosis.</p></section><section className="pz-panel"><h2>History recovery backups</h2><p>Recovery keeps an original copy on this device, including any scans later deleted from History. Delete recovery backups when you no longer need them. This leaves your current saved scans intact.</p><button className="pz-btn pz-btn-quiet" onClick={clearRecovery}>Delete recovery backups</button></section></main>}
       {screen==='Privacy'&&<PrivacyPage/>}{screen==='About'&&<AboutPage/>}{screen==='Lab'&&lab&&<main className="page lab-page"><h1>Lab</h1><Experiment/></main>}
     </Suspense></div>
-    <footer className="site-footer"><span className="footer-note"><Icon name="shield" size={14}/>A private moment. A little more awareness.</span><div className="footer-links"><button onClick={()=>navigate('Privacy')}>Privacy</button><button onClick={()=>navigate('About')}>About this index</button><button onClick={()=>navigate('Settings')}>Settings</button></div></footer>
+    <footer className="site-footer"><span className="footer-note"><Icon name="shield" size={14}/>A private moment. A little more awareness. <span className="pz-fineprint" style={{marginLeft:'6px'}}>{versionText}</span></span><div className="footer-links"><button onClick={()=>navigate('Privacy')}>Privacy</button><button onClick={()=>navigate('About')}>About this index</button><button onClick={()=>navigate('Settings')}>Settings</button></div></footer>
   </div>;
 }
 

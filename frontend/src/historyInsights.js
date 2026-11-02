@@ -82,3 +82,4 @@ export function computeGroupInsights(rows = []) {
     goodQualityShare
   };
 }
+

@@ -120,3 +120,4 @@ try {
 }
 
 console.log(`Saved baseline screenshots to ${outDir}`);
+

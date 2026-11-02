@@ -1,2 +1,3 @@
 User-agent: *
 Allow: /
+Sitemap: https://jyotiraditya21-bug.github.io/pause-stress-mvp/sitemap.xml

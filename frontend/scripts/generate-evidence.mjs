@@ -92,3 +92,4 @@ const publicDir = path.join(root, 'public');
 fs.mkdirSync(publicDir, { recursive: true });
 fs.writeFileSync(path.join(publicDir, 'evidence.json'), JSON.stringify(evidence, null, 2));
 console.log(`Generated public/evidence.json (tests: ${unitTestCount} unit, ${playwrightSpecCount} e2e, assets: ${releaseAssets.length})`);
+

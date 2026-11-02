@@ -22,7 +22,7 @@ function GroupStats({ rows }) {
         </div>
         <div style={{background:'var(--mist)',padding:'6px 10px',borderRadius:'8px'}}>
           <span className="pz-fineprint" style={{display:'block'}}>Median Calm index</span>
-          <strong>{insights.medianScore != null ? `${insights.medianScore.toFixed(1)} /10` : 'N/A'}</strong>
+          <strong>{insights.medianScore != null ? insights.medianScore.toFixed(1) : 'N/A'}</strong>
           <span className="pz-fineprint" style={{display:'block',fontSize:'10px',lineHeight:'1.2'}}>
             MAD: {insights.madScore != null ? `±${insights.madScore.toFixed(1)}` : 'N/A'}
           </span>
@@ -70,7 +70,7 @@ function Trend({sessions}){
         <tr><th scope="col">Date and time</th><th scope="col">Calm index</th></tr>
       </thead>
       <tbody>
-        {rows.map(r=><tr key={r.id}><td>{new Date(r.created_at).toLocaleString()}</td><td>{r.average.toFixed(1)} /10</td></tr>)}
+        {rows.map(r=><tr key={r.id}><td>{new Date(r.created_at).toLocaleString()}</td><td>Score: {r.average.toFixed(1)}</td></tr>)}
       </tbody>
     </table>
   </>;

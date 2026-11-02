@@ -81,3 +81,4 @@ test('deriveScanQuality returns Insufficient when failing Limited criteria or st
   const res3 = deriveScanQuality({});
   assert.equal(res3.quality, 'insufficient');
 });
+
