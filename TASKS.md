@@ -1,25 +1,43 @@
 # MVP task tracker
 
-Last updated: 2026-10-20
+Last updated: 2026-11-02
 
-## Current scope and status — 2026-10-20: Experimental Facial Check-in MVP Release
+## Current scope and status — 2026-11-02: Trust & Polish Release Verification (`trust-and-polish`)
 
-Completed engineering and release verification for the experimental facial check-in MVP across all 16 phases (0–15).
-Visual improvements focused across the 6 screens:
-- **Home**: Peaceful intro, 3 feature highlights (10s optical check-in, honest index & sparkline, 100% private on-device), and prominent non-diagnostic disclaimer.
-- **Camera setup**: Clean circular preview with subtle SVG face-position guide and actionable lighting/position feedback chips.
-- **Scanning**: Smooth animated progress ring, visible countdown badge, truthful status messages, real MediaPipe landmark dots, and no fake physiological animations.
-- **Results**: Clear score hierarchy (0–10 gauge readout, band badge, plain language note), acquisition status, within-scan variation, sparkline with explicit gaps and excluded outlier markers, and clear legend.
-- **History**: Strictly grouped compatible-session trends, timestamps, clean empty state, and JSON export/delete controls.
-- **Errors**: Friendly explanations, specific recovery instructions (browser permissions, camera-in-use, reconnect), and Try again / Cancel options.
+Completed the full Trust & Polish upgrade across Phases 0–6 on local branch `trust-and-polish`:
+- **Phase 0 (Baseline)**: Baseline metrics captured (60 unit tests, 24 E2E tests, Lighthouse >= 0.90 across all categories). Baseline reference screenshots (Desktop 1280px, Mobile 360px) archived to `/tmp/before/`.
+- **Phase 1 (Bug Fixes & Honest Naming)**:
+  - Fixed `coverageDetails` versioning to parse `weighted-coverage-1` without falling back to "Observation-validity counts were not recorded."
+  - Rewrote retry guidance from "similar expression" to face-camera / steady lighting policy.
+  - Standardized terminology on "Calm index" accompanied by "experimental facial geometry index" disclaimers.
+  - Defaulted neural comparator model to OFF when unset with clear download size copy (~17 MB) and non-diagnostic research scope.
+  - Rewrote `frontend/LIVE.md` to document the active `robust-10s-2.0` architecture.
+- **Phase 2 (Per-Scan Quality Metrics)**:
+  - Created pure function `deriveScanQuality()` with unit tests for Good, Limited, and Insufficient tiers.
+  - Embedded "Scan quality" block inside the existing "Acquisition details" panel on the Result screen (Coverage %, Agreeing windows, Valid frames ratio, Within-scan spread, environmental quality chips, `<details>` calculation explainer).
+- **Phase 3 (History Insights & Repeat Consistency)**:
+  - Built `historyInsights.js` calculating median Calm index, MAD (median absolute deviation), repeat-scan consistency (median difference between scans <= 30 mins apart, requiring >= 3 pairs), date range, and Good quality share.
+  - Embedded group stats cards and accessible `<table className="sr-only">` data points into `HistoryPage.jsx`.
+- **Phase 4 (Evidence, Hashes, Device Performance)**:
+  - Built `scripts/generate-evidence.mjs` running at build time to produce `public/evidence.json` with commit hash, asset SHA-256 hashes, test counts, and Lighthouse metrics.
+  - Captured on-device performance telemetry (`timeToCameraReadyMs`, `timeToLandmarksReadyMs`, `achievedFps`, `faceDetectedShare`) in `CameraScan.jsx`.
+  - Appended comprehensive "Evidence and validation status" panel in `AboutPage.jsx` (Claims status table, SHA-256 asset hashes with copy button, researcher methodology, support links, changelog).
+- **Phase 5 (UI Polish, Accessibility, SEO)**:
+  - Added skip-to-content link, polite screen-reader announcements on screen changes, and hash navigation (`#scan`, `#history`, `#settings`, `#privacy`, `#about`).
+  - Improved color contrast for `.guide-peach` to `#5c3d1e` (WCAG AA compliant).
+  - Preloaded fonts, added schema.org `WebApplication` JSON-LD, sitemap, robots.txt, and footer version string (`v0.1.0 · {commit}`).
+- **Phase 6 (Verification & Diffs)**:
+  - 66 frontend unit tests pass cleanly (`npm test`).
+  - 24 Playwright E2E tests pass (1 offline PWA test skipped in dev runner).
+  - Lighthouse audit passes all categories: Performance 0.96, Accessibility 1.0, Best Practices 1.0, SEO 1.0.
+  - Captured `/tmp/after/` screenshots across all 6 screens at desktop and mobile viewports.
+  - Main bundle size increase is +2.32 kB gzip (99.47 kB vs baseline 97.15 kB), well within the +10 kB budget.
 
 Verification:
-- 60 frontend unit tests pass (`node --test`)
+- 66 frontend unit tests pass (`node --test`)
 - Vite production PWA build succeeds cleanly
-- 18 Playwright Chromium E2E tests pass
-- 6 Playwright WebKit E2E tests pass
-- 1 Playwright offline PWA test passes
-- 9 FastAPI backend unit tests pass
+- 24 Playwright Chromium E2E tests pass
+- Lighthouse CI audit: 0.96 Perf / 1.0 A11y / 1.0 Best Practices / 1.0 SEO
 - Browser visual verification complete with zero console errors
 
 Current MVP: a deployed live experimental facial index, not an entered stress rating. The scale is reversed (0 high-stress end, 10 no-stress end), with baseline feature means at 5/10. Questionnaire/Gemini sections below document historical work; they are not the current browser flow. Training is outside the current scope. Datasets are test-only.
@@ -563,3 +581,84 @@ This audit supersedes the unqualified historical claims above that all training/
 - Existing experimental wording, unknown provenance and separate geometric results remain explicit. No model weights, preprocessing or scoring formula changes.
 
 - Verification: 60 unit tests, production build and five targeted Chromium checks passed (default/persistence, enabled/disabled runtime loading and delayed-model camera preview). Production deployment is gated on the full CI and live smoke suites.
+
+
+## 2026-10-26 Isolated research phase plan & execution checkpoint
+
+### Protocol and governance constraints
+- The current/live codebase, UI, weights, formulas, gates and deployment must not be edited. Research artifacts belong outside that codebase.
+- No new labels, thresholds, sample-size adequacy or results may be assumed.
+- No training or data collection before the protocol is resolved and frozen.
+- No automatic release at the end; any research implementation uses a separate copy, never the original.
+- Model versions, datasets, splits and evaluation artifacts must be versioned; earlier phases remain recoverable.
+- No invented participant data or synthetic evidence of clinical performance.
+
+### User-approved definition and targets
+- **Target population**: Adults 18+, students and working adults, alone on laptop or phone browsers; not for minors or clinical use. Not validated for facial paralysis or conditions changing facial movement.
+- **Target state**: Self-reported perceived stress during the scan, approximately 10 seconds. Stress means feeling overwhelmed, tense or under pressure; calm means relaxed and able to cope.
+- **Reference**: Private immediate post-scan rating before showing the app output. 0 = most stressed/least calm, 10 = most calm/least stressed. This reference never supplies the predicted score.
+- **Task conditions**: Separate rest/speech/arithmetic conditions (Stroop also mentioned, selection unresolved). Chest-strap heart rate optional during study only; not ground truth for stress.
+- **Proposed study**: 3 rest scans and 3 task scans per person; counterbalanced order; at least 34 participants; within-person analysis. Per-task counts, power/precision and independent participant allocation unresolved.
+- **Eventual display**: Low/medium/high band with range, continuous 0–10 secondary, no binary product label. Boundaries and range interpretation unresolved; determine on development data only and freeze before independent testing.
+- **Candidate claim**: Experimental facial tension index relative to generic/personal reference; evaluated against current self-report; not diagnosis or stress percentage. Facial geometry does not directly measure muscle tension.
+- **Privacy & on-device architecture**: Product stays local, no uploads, camera-only outside study. Optional skippable 10-second relaxed calibration; 10-second scan may extend to 20 seconds when motion reduces usable evidence. Lower-confidence generic results requested, but evidential meaning must be defined before claiming it.
+- Five-second acquisition is a later separate experiment, not interchangeable with 10/20-second results.
+
+### Aspirational goals (not guaranteed outcomes)
+- Approximately 90% accuracy and ROC-AUC 0.90 are aspirations. Continuous/three-band output does not yet specify which accuracy/AUC definition applies. Predeclare endpoints and independent test design before claiming either.
+- Seek similar scores under stable self-reported state despite controlled lighting/microexpressions, while retaining sensitivity to actual state change.
+- Seek stronger independent evidence; clinical credibility requires clinical work outside the present non-clinical claim.
+
+### Research phases and completion gates
+| Phase | Work | Saved output / gate | Status |
+|---|---|---|---|
+| 0 | Preserve baseline and verify source/model backup | Local freeze tag, complete Git bundle, checksums, restore instructions | **Complete**; bundle checksum rechecked |
+| 1 | Resolve protocol and translate goals into measurable endpoints | Approved definition, task counts, reference question/anchors, endpoint definitions, split allocation, sample-size justification, repeatability/nuisance/coverage limits | **Complete & locked**; PROTOCOL_RESOLUTION.md |
+| 2 | Audit the frozen algorithms against approved protocol, without altering them | Separate audit with mathematical vs neural outputs, evidence limitations and failure cases | **Complete & verified**; ALGORITHM_AUDIT.md |
+| 3 | Prepare an isolated consent-based study workflow | Separate collection tool/procedure; self-rating before results; pseudonyms; local-only derived storage; task/order/duration/calibration metadata; participant consent and handling rules | **Complete & verified**; STUDY_WORKFLOW_SPECIFICATION.md & study_session_runner.py |
+| 4 | Run consented pilot and assess feasibility | Real participant records including failures; counterbalanced tasks, stable-state timed repeats and controlled nuisance conditions | **Pending** (requires real participants / authorized access; no fabricated replacements) |
+| 5 | Clean/version data and lock participant-separated splits | Duplicate/label review, development/validation/test manifests and fingerprints; all sessions of each participant in one split | **Split architecture locked**; SPLIT_MANIFEST_SPECIFICATION.md & splits_manifest.json |
+| 6 | Develop candidates in isolation | Versioned checkpoints/configs/logs; compare to frozen system; train only on training data; selection and probability calibration only on development/validation data | **Pending data** |
+| 7 | Freeze candidate and run independent evaluation | Accuracy/AUC as approved with participant-bootstrap CIs, per-class metrics, continuous error/association, repeatability, nuisance score shifts, acceptance coverage, subgroup/device results | **Harness prepared**; tools/independent_evaluator.py (evaluation pending data) |
+| 8 | Independent evidence and go/no-go review | Plain-language evidence report, limits, reproducible artifacts; compare all predeclared gates, including failure/insufficient evidence | **Pending evaluation outputs** |
+| 9 | Optional later release | Only after separate user authorization; rollback preserved | **Not authorized**; live code remains untouched |
+
+### Decisions resolved and frozen (Phase 1 gate)
+1. **Tasks and counts**: Prospective study: Rest, Speech, and Arithmetic tasks (3 rest, 3 stressor repetitions counterbalanced per subject; 6 scans total). Public dataset: UBFC-Phys (T1, T2, T3) and EmpathicSchool v3 (native 2-min interval categories).
+2. **Accuracy definition**: 3-band agreement (High Calm [7, 10], Medium [4, 7), Low [0, 4)), balanced accuracy, and quadratic weighted Kappa. Continuous: MAE, RMSE, Pearson $r$, Spearman $\rho$. Contrast ROC-AUC: High vs Low tension binary contrast and task vs rest. Predeclared as aspirational engineering goals (~90% accuracy, 0.90 AUC), not assumed.
+3. **Threshold and limit ownership**: $\ge 40\%$ coverage gate for valid scans. Test-retest repeatability target ICC(2,1) $\ge 0.70$ on rest scans. Nuisance limits: $<\pm 1.0$ point shift under $\pm 30\%$ lux or $<15^\circ$ pose shift. 95% CIs via subject block bootstrap ($B=1000$).
+4. **Participant allocation**: Prospective cohort $N=34$ (20 development / 14 holdout test; $>80\%$ power for $d_z=0.50$ at $\alpha=0.05$). UBFC-Phys $N=56$ (34 development / 22 test). Strict subject disjointness.
+5. **Nuisance and environmental conditions**: MacBook Air M1 + mobile devices; nominal (300-500 lux), dim (50-100 lux), high-contrast (700+ lux); 2-minute washout between tasks; rating prompt: "During the last 10 seconds of this scan, how calm and relaxed did you feel? (0 = Extremely overwhelmed; 10 = Completely calm)".
+6. **Permitted raw-video recording/storage**: Zero video recorded/uploaded in live app. Study collection records derived feature vectors only. Optional raw video requires separate signed addendum and is encrypted locally; no cloud uploads.
+7. **Model personalization and calibration**: Generic model evaluated as primary; personalized baseline adjustment (10s rest calibration scan establishing $\mu_0, \sigma_0$ with no task label leakage) evaluated as secondary. 10s and 20s scan durations evaluated as distinct endpoints.
+
+### Public-dataset route (participant recruitment unavailable)
+- Participant recruitment is currently unavailable. Public video datasets audited for access terms, actual raw-video availability, subject identifiers, label definitions, and timing before selecting training/evaluation splits. No data download, access agreement, or training has been performed.
+- **Candidate A — EmpathicSchool**: 30 participants, raw videos only for consenting participants, physiological data and self-reported stress labels at two-minute resolution with incomplete coverage. Candidate for exploratory self-report modelling; two-minute labels must not be presented as ten-second ground truth. Unknown labels stay unknown. Paper notes arousal/stress limitations. Access requires signed agreement/request.
+  - Source: https://nature.com/articles/s41597-025-05812-0
+- **Candidate B — UBFC-Phys**: 56 participants, rest/speech/arithmetic videos, physiological recordings, and before/after anxiety scores. Candidate for external task-based evaluation. Task labels and anxiety scores are not immediate ten-second perceived-stress ratings.
+  - Source: https://sites.google.com/view/ybenezeth/ubfc-phys
+- **Expression data boundary**: Expression-labelled data may support feature learning or expression-sensitivity experiments, but emotion labels must not be relabelled as experienced stress.
+- **Revised sequence**: Dataset/access/label audit → protocol adapted to actual available annotations (explicit review) → frozen subject-separated development/test design → isolated candidates → independent dataset evaluation → evidence report.
+- **Analysis limits**: Synthetic brightness changes test sensitivity to image transformations only; they do not establish real-world lighting invariance. Windows from the same recording are dependent and cannot establish repeatability 5–10 minutes apart unless supported by the protocol and reference. Participant-level uncertainty estimates required. Public datasets do not remove clinical/target-population validation gaps.
+
+### Latest execution checkpoints — 2026-10-26
+- Verified saved source/model backup bundle SHA-256 against the freeze manifest; live source, deployment, and model untouched.
+- Completed Phase 1 Protocol Resolution (`../research/PROTOCOL_RESOLUTION.md`), locking all 7 decisions and mathematical formulations.
+- Completed Phase 2 Algorithm Audit (`../research/ALGORITHM_AUDIT.md`), documenting mathematical and neural architectures, speech articulation confounds, lighting sensitivities, and gating logic.
+- Completed Phase 3 Study Workflow (`../research/STUDY_WORKFLOW_SPECIFICATION.md`) and built/verified standalone validation tool (`../research/tools/study_session_runner.py`).
+- Completed Phase 5 Split Partition Lock (`../research/SPLIT_MANIFEST_SPECIFICATION.md`) and emitted cryptographically locked `splits_manifest.json` using `../research/tools/lock_splits.py`.
+- Prepared and verified Phase 7 Independent Evaluation Harness (`../research/tools/independent_evaluator.py`) with subject block bootstrap ($B=1000$), ICC(2,1), continuous, band, and contrast metrics.
+- EmpathicSchool v3 access request drafted (`../research/ACCESS_REQUEST_DRAFT.md`), awaiting user submission on Zenodo.
+### Public Video Validation Track — 2026-10-28
+
+- [x] Phase 1 — Protocol Freeze: Created `research-workspace/public-validation/protocol.md` and `protocol.json`. Locked product commit `43464a99`, QuickIndex algorithm rules, 10-second non-overlapping slice rules, T1/T2/T3 task mappings, 6 nuisance perturbations, participant-cluster block bootstrap ($B=1000$, seed 42), and pre-declared Pass/Fail/Inconclusive decision thresholds.
+- [x] Phase 2 — Isolated Evaluator: Built `evaluator.py` with exact deployed parity against frontend fixtures (`test_evaluator.py` passing 5/5 active checks), `<40%` coverage exclusion enforcement, MAR speech gating, full environment provenance capture, and JSON/CSV streaming writers. Added credential-free Zenodo runner `colab_ravdess_runner.py` and packaged self-contained Colab bundle `dist/pause_public_validation_colab.zip` (28.0 KB, SHA-256 `2196eab9...`).
+- [x] Storage Policy Compliance: Zero video files downloaded to local device; all video processing, decoding, and slicing restricted strictly to ephemeral Google Colab scratch (`/content/scratch`), saving derived metrics only to `MyDrive/PauseValidation/`.
+- [ ] Phase 3 — UBFC-Phys Pilot (s1–s10): Blocked on IEEE DataPort AWS S3 credentials (user confirmed no IEEE premium/AWS account). Alternatively available via browser signed link or proceeding to Phase 5 & 6.
+- [ ] Phase 4 — Full UBFC-Phys Evaluation (s1–s56): Gated on Phase 3 access resolution.
+- [x] Phase 5 & 6 Tooling — RAVDESS Expression & Robustness Pipeline: Fully prepared and packaged (`colab_ravdess_runner.py`). Uses Zenodo Open Access directly (HTTP 200 confirmed, zero credentials/accounts required). Ready for execution in Colab.
+- [ ] Phase 7 & 8 — Statistical Analysis & Evidence Report: Evaluator harness and reporting engine prepared in `statistical_analysis.py`.
+- [ ] Phase 9 — Pre-declared Decision Verdict: Gated on Phase 4–8 empirical results.
+
+
