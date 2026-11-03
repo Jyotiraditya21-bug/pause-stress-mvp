@@ -22,7 +22,7 @@ function getRecoveryAction(errorMessage) {
   return 'Check your lighting, center your face in the circle, and try again.';
 }
 
-export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnabled=true}) {
+export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnabled=true,onEvidence}) {
   return <CameraScan mlEnabled={mlEnabled} onComplete={onComplete} baseline={baseline} calibrating={calibrating} render={({state,error,hint,progress,paused,extended,tolerant,secondsRemaining,videoRef,overlayRef,start,cancel,active,videoReady,hardCap})=>{
     const starting=state==='permission'||state==='loading';
     const isError=Boolean(error)||state==='failed';
@@ -147,6 +147,19 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
         <p className="scan-disclaimer">
           <strong>A check-in, not a diagnosis.</strong> Pause is an experimental facial check-in tool. Its facial index cannot diagnose medical conditions or measure clinical stress.
         </p>
+        <section className="benchmark-panel" aria-labelledby="benchmark-title">
+          <div className="benchmark-heading">
+            <span className="benchmark-kicker">MODEL EVIDENCE</span>
+            <h2 id="benchmark-title">What has been evaluated so far</h2>
+            <p>Separate experiment: an optional facial-expression model on acted RAVDESS videos.</p>
+          </div>
+          <div className="benchmark-grid">
+            <article className="benchmark-stat"><strong>0.906</strong><span>ROC-AUC</span></article>
+            <article className="benchmark-stat"><strong>79.39%</strong><span>Accuracy</span></article>
+            <article className="benchmark-stat"><strong>78.88%</strong><span>Balanced accuracy</span></article>
+          </div>
+          <p className="benchmark-caveat">Source checkpoints · 1,344 acted-expression videos · actor-separated evaluation. These results are not stress accuracy and do not validate the averaged model or the visible Calm index. <button type="button" className="text-link" onClick={onEvidence}>See evidence and limitations</button></p>
+        </section>
       </section>
     </main>;
   }}/>;
