@@ -33,6 +33,114 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
     const isLightingIssue = hint.toLowerCase().includes('light');
     const chipType = isGoodPosition ? 'is-good' : isLightingIssue ? 'is-lighting' : 'is-position';
 
+    if (active && !isError) {
+      return (
+        <main className="scan-fullscreen-overlay" role="dialog" aria-modal="true" aria-label="Camera Scan in Progress">
+          <div className="scan-fullscreen-header">
+            <span className="welcome-chip" style={{ background: '#fff', border: '1px solid #dce8d6' }}>
+              <span aria-hidden="true" />
+              {calibrating ? 'Personal baseline calibration' : '10-Second Camera Scan'}
+            </span>
+            <span className="duration-pill" style={{ background: 'var(--paper)', border: '1px solid #cbd8c9' }}>
+              {extended ? 'Up to 20 sec' : '10 sec'}
+            </span>
+          </div>
+
+          <div className={`scan-circle ${paused ? 'is-paused' : ''} ${starting ? 'is-loading' : ''}`} style={{ '--progress': progress }}>
+            <svg className="scan-ring" viewBox="0 0 320 320" aria-hidden="true">
+              <circle cx="160" cy="160" r="147" />
+              <circle className="scan-ring-fill" cx="160" cy="160" r="147" pathLength="1" />
+            </svg>
+            <div className="scan-camera">
+              <video ref={videoRef} autoPlay playsInline muted className={videoReady ? 'is-ready' : ''} />
+              <canvas ref={overlayRef} aria-hidden="true" />
+              {!videoReady && (
+                <div className="scan-placeholder" aria-hidden="true">
+                  <svg viewBox="0 0 220 220">
+                    <circle className="face-halo" cx="110" cy="110" r="88" />
+                    <path className="face-shoulders" d="M48 220c0-42 27-64 62-64s62 22 62 64" />
+                    <path className="face-shape" d="M70 86c0-32 17-50 40-50s40 18 40 50v28c0 31-19 52-40 52s-40-21-40-52Z" />
+                    <path className="face-hair" d="M69 89c-9-39 15-60 41-60 31 0 48 26 41 62-9-2-16-15-18-26-13 15-38 24-64 24Z" />
+                    <path className="face-detail" d="M86 108h5m38 0h5m-27 8-3 12h9m-13 14c7 5 14 5 21 0" />
+                  </svg>
+                </div>
+              )}
+              {videoReady && state === 'positioning' && (
+                <div className="face-guide-overlay" aria-hidden="true">
+                  <svg viewBox="0 0 240 240" className="face-guide-svg">
+                    <ellipse cx="120" cy="115" rx="58" ry="76" className="guide-oval" />
+                    <line x1="98" y1="102" x2="142" y2="102" className="guide-cross" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            {state === 'countdown' && (
+              <span className="scan-badge" aria-label={`${secondsRemaining} seconds remaining`}>
+                {secondsRemaining}
+              </span>
+            )}
+          </div>
+
+          {state === 'positioning' && (
+            <div className={`scan-feedback-chip ${chipType}`} role="status">
+              <span className="feedback-dot" aria-hidden="true" />
+              <span>{hint}</span>
+            </div>
+          )}
+
+          <div className="scan-ready-label" style={{ fontSize: '18px', fontWeight: 600, marginTop: '14px' }}>
+            {starting ? 'Preparing camera…' : state === 'countdown' ? 'Keep looking naturally' : state === 'analyzing' ? 'Calculating your Calm index…' : 'Center your face in view'}
+          </div>
+
+          <p className="scan-hint" aria-live="polite" style={{ fontSize: '14px', minHeight: '26px' }}>
+            {extended ? 'Almost there, small movements are fine' : state === 'countdown' ? hint : status}
+          </p>
+
+          {/* Things to keep in mind (Constraints & Guidelines) */}
+          <div className="scan-guidelines-bar" aria-label="Scan guidelines">
+            <div className="scan-guideline-item">
+              <span className="guideline-icon">💡</span>
+              <div>
+                <strong>Soft, even light</strong>
+                <span>Avoid harsh backlight</span>
+              </div>
+            </div>
+            <div className="scan-guideline-item">
+              <span className="guideline-icon">😐</span>
+              <div>
+                <strong>Neutral expression</strong>
+                <span>Relax face &amp; jaw</span>
+              </div>
+            </div>
+            <div className="scan-guideline-item">
+              <span className="guideline-icon">🧘</span>
+              <div>
+                <strong>Hold steady</strong>
+                <span>Small movements are fine</span>
+              </div>
+            </div>
+            <div className="scan-guideline-item">
+              <span className="guideline-icon">👤</span>
+              <div>
+                <strong>Face centered</strong>
+                <span>Look at screen naturally</span>
+              </div>
+            </div>
+          </div>
+
+          {state !== 'analyzing' && (
+            <button className="scan-cancel" onClick={cancel} style={{ minWidth: '160px', marginTop: '16px' }}>
+              Cancel
+            </button>
+          )}
+
+          <p className="scan-card-footnote" style={{ marginTop: '12px' }}>
+            <Icon name="shield" size={15} /> 100% private. Video never leaves your device.
+          </p>
+        </main>
+      );
+    }
+
     return <main className="scan-screen">
       <div className="scan-story">
         <span className="welcome-chip"><span aria-hidden="true"/>A quiet space for yourself</span>
