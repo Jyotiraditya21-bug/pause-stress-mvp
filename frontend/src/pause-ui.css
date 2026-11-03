@@ -238,13 +238,15 @@ button:active:not(:disabled) { transform: translateY(1px); }
 
 @media(min-width:1500px) { .scan-screen { padding-top: 60px; padding-bottom: 48px; }.scan-screen h1 { font-size: 60px; max-width: 500px; }.scan-intro { font-size: 22px; max-width: 430px; } }
 @media(max-width:900px) {
+  .site-header { flex-wrap: wrap; }
+  .main-nav { flex: 1 0 100%; justify-content: center; }
   .scan-screen { column-gap: 36px; grid-template-columns: minmax(0,1fr) minmax(0,390px); padding-top: 28px; }
   .scan-screen h1 { font-size: 40px; letter-spacing: -1.6px; }.scan-intro { font-size: 18px; }
   .scan-card { padding: 20px; }.scan-guide { gap: 17px; }
 }
 @media(max-width:700px) {
-  .site-header { min-height: 78px; padding: 12px 20px; gap: 8px; flex-wrap: wrap; }.brand { font-size: 24px; }.brand-mark { width: 31px; height: 31px; }
-  .main-nav { order: 2; width: 100%; max-width: 100%; overflow-x: auto; justify-content: flex-start; scrollbar-width: thin; }.main-nav button { flex: 0 0 auto; min-height: 44px; padding: 0 14px; font-size: 12px; }.main-nav button svg { width: 16px; }
+  .site-header { min-height: 78px; padding: 12px 20px; gap: 8px; flex-wrap: nowrap; }.brand { flex: 0 0 auto; font-size: 24px; }.brand-mark { width: 31px; height: 31px; }
+  .main-nav { order: initial; flex: 1 1 0; width: 0; min-width: 0; max-width: 100%; overflow-x: auto; justify-content: flex-start; scrollbar-width: thin; }.main-nav button { flex: 0 0 auto; min-height: 44px; padding: 0 14px; font-size: 12px; }.main-nav button svg { width: 16px; }
   .scan-screen { grid-template-columns: minmax(0,1fr); width: min(500px,100%); padding: 19px 20px 23px; gap: 23px; }
   .scan-story { text-align: center; padding: 0; }.welcome-chip { font-size: 11px; padding: 6px 10px; }
   .scan-description { font-size: 13px; line-height: 1.5; margin: 8px auto 0; max-width: 320px; }
