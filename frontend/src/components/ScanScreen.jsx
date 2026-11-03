@@ -38,13 +38,13 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
         <span className="welcome-chip"><span aria-hidden="true"/>A quiet space for yourself</span>
         <h1>{title}</h1>
         <p className="scan-intro">{calibrating?'A familiar reference. A more personal check-in. Take a moment when you feel calm.':'Take a breath. Find your light. Give yourself a moment to pause.'}</p>
-        <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'A short 10-second camera check-in gives you an experimental facial index based on facial geometry. No wearables or questions. Video stays on your device.'}</p>
+        <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'A short 10-second camera check-in gives you an experimental facial index based on facial geometry. No wearables or questions. Camera frames are analyzed on your device; video and face landmarks are not uploaded.'}</p>
         <ol className="scan-guide">
           <li><span className="guide-icon guide-peach"><Icon name="sun"/></span><div><strong>Find a comfortable spot</strong><p>Sit facing soft, even light.</p></div></li>
           <li><span className="guide-icon guide-mint"><Icon name="scan"/></span><div><strong>Bring your face into view</strong><p>Look naturally toward the camera.</p></div></li>
           <li><span className="guide-icon guide-lilac"><Icon name="spark"/></span><div><strong>See your check-in</strong><p>Your Calm index opens when the scan finishes.</p></div></li>
         </ol>
-        <div className="privacy-note"><Icon name="shield"/><p><strong>Your space stays yours.</strong><br/>Video stays on your device.</p></div>
+        <div className="privacy-note"><Icon name="shield"/><p><strong>Your camera scan stays on your device.</strong><br/>The website host still receives routine page requests.</p></div>
       </div>
 
       <section className={`scan-card ${active?'scan-card-active':''} ${isError?'scan-card-error':''}`} aria-label="Camera scan">
@@ -141,8 +141,8 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
       <section className="scan-about" aria-label="About Pause">
         <ul className="scan-features" aria-label="Features">
           <li><Icon name="scan" size={16}/>Short 10-second camera check-in</li>
-          <li><Icon name="spark" size={16}/>Honest index &amp; scan graph</li>
-          <li><Icon name="shield" size={16}/>100% private on your device</li>
+          <li><Icon name="spark" size={16}/>Experimental facial geometry index &amp; scan graph</li>
+          <li><Icon name="shield" size={16}/>Camera processing stays on your device</li>
         </ul>
         <p className="scan-disclaimer">
           <strong>A check-in, not a diagnosis.</strong> Pause is an experimental facial check-in tool. Its facial index cannot diagnose medical conditions or measure clinical stress.
