@@ -146,11 +146,11 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
         <span className="welcome-chip"><span aria-hidden="true"/>A quiet space for yourself</span>
         <h1>{title}</h1>
         <p className="scan-intro">{calibrating?'A familiar reference. A more personal check-in. Take a moment when you feel calm.':'Take a breath. Find your light. Give yourself a moment to pause.'}</p>
-        <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'A short 10-second camera check-in gives you an experimental facial index based on facial geometry. No wearables or questions. Video stays on your device.'}</p>
+        <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'An experimental check-in based on real-time facial geometry. No wearable sensors, no questions, and zero cloud uploads.'}</p>
         <ul className="scan-features" aria-label="Features">
-          <li><Icon name="scan" size={15}/>Short 10-second camera check-in</li>
-          <li><Icon name="spark" size={15}/>Honest index &amp; scan graph</li>
-          <li><Icon name="shield" size={15}/>100% private on your device</li>
+          <li><Icon name="scan" size={15}/>10-second check-in</li>
+          <li><Icon name="spark" size={15}/>Honest geometric index</li>
+          <li><Icon name="shield" size={15}/>100% private on-device</li>
         </ul>
       </div>
 
@@ -237,7 +237,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
             {active && state!=='analyzing' && (
               <button className="scan-cancel" onClick={cancel}>Cancel</button>
             )}
-            <p className="scan-card-footnote"><Icon name="shield" size={15}/>Private by design. Camera off when you finish.</p>
+            <p className="scan-card-footnote"><Icon name="shield" size={15}/>Private by design. Camera turns off automatically when finished.</p>
           </>
         )}
       </section>
