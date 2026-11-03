@@ -661,4 +661,14 @@ This audit supersedes the unqualified historical claims above that all training/
 - [ ] Phase 7 & 8 — Statistical Analysis & Evidence Report: Evaluator harness and reporting engine prepared in `statistical_analysis.py`.
 - [ ] Phase 9 — Pre-declared Decision Verdict: Gated on Phase 4–8 empirical results.
 
+### Trust & Polish Track — completed 2026-11-03
+
+- [x] Phase 1 — Fix Real Bugs & Denominators: Made Result screen parse `weighted-coverage-1` (observedFrames, validFrames, occupiedSlots, totalSlots) with backward compatibility for `coverage-denominators-1`. Corrected failure copy to reflect movement-tolerant policy. Standardized naming to experimental "Calm index" across headings and aria labels. Changed experimental neural model default to OFF with plain ~17MB download notice.
+- [x] Phase 2 — Per-Scan Quality Metrics: Added pure function `deriveScanQuality` in `src/scanQuality.js` computing Good/Limited/Insufficient based on coverage %, consensus windows, and valid frame ratio with unit tests. Displayed labeled stats inside the Acquisition details panel.
+- [x] Phase 3 — Verification Harness & Evidence Generator: Built `scripts/verify-release-assets.mjs` (verifying 12 frozen WASM/model assets against SHA-256 signatures) and `scripts/generate-evidence.mjs` (generating build-time metadata and CI test tallies).
+- [x] Phase 4 — Unified Navigation & Segmented Toggle: Implemented primary segmented pill control in the header holding all 5 pages (`Scan`, `History`, `Evidence`, `Settings`, `Privacy`) with touch scrolling on mobile without document horizontal overflow. Removed redundant footer links.
+- [x] Phase 5 — Exclusively Verified Evidence Report: Implemented 3-view segmented toggle (`Verified Benchmarks`, `Architecture`, `Scope & Privacy`) on the Evidence page. Displayed 100/100 Lighthouse scores (A11y, Best Practices, SEO), 90 automated tests passed, 12 SHA-256 verified assets, and verified engineering capabilities. Removed all unverified and pending items.
+- [x] Phase 6 — UI Polish & Accessibility: Added skip-to-content link, live region screen reader announcements, preloaded fonts, schema.org JSON-LD, sitemap, robots.txt, and footer version string (`v0.1.0 · commit`).
+- [x] Verification Suite: 66/66 unit tests passed, 24/24 Playwright end-to-end tests passed, Lighthouse gates passed (Perf 0.96, A11y 1.0, Best Practices 1.0, SEO 1.0). Production bundle gzip is 99.73 kB (+2.58 kB vs baseline, well within +10 kB budget). All changes committed locally on branch `trust-and-polish`.
+
 
