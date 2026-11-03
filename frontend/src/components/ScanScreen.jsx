@@ -251,26 +251,26 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
             </span>
           </div>
           <p className="pz-fineprint model-benchmark-desc">
-            Empirical neural classifier gains evaluated across 1,344 holdout test videos compared to initial baseline:
+            Empirical neural classifier evaluated across 2,464 designated test images:
           </p>
 
           <div className="metric-badge-grid model-benchmark-grid">
             <div className="metric-card">
               <span className="pz-fineprint">ROC-AUC Score</span>
-              <div className="metric-number">0.906</div>
-              <span className="metric-sub">+0.406 vs chance (0.50)</span>
+              <div className="metric-number">0.794</div>
+              <span className="metric-sub">+0.294 vs chance (0.50)</span>
             </div>
 
             <div className="metric-card">
               <span className="pz-fineprint">Test Accuracy</span>
-              <div className="metric-number">79.4%</div>
-              <span className="metric-sub">+28.1% vs epoch 1 (51.3%)</span>
+              <div className="metric-number">71.2%</div>
+              <span className="metric-sub">+20.9% vs chance (50.3%)</span>
             </div>
 
             <div className="metric-card">
               <span className="pz-fineprint">Validation Peak</span>
-              <div className="metric-number">90.2%</div>
-              <span className="metric-sub">Holdout unseen actors</span>
+              <div className="metric-number">74.3%</div>
+              <span className="metric-sub">Balanced accuracy</span>
             </div>
 
             <div className="metric-card">
@@ -281,7 +281,7 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
           </div>
 
           <p className="pz-fineprint model-benchmark-footnote">
-            * Evaluated on held-out test splits. Metrics describe image-level facial expression pattern recognition; the visible Calm index is an experimental geometric index that operates independently.
+            * Evaluated on designated test splits (2,464 images). ROC-AUC 0.7938, test accuracy 71.19%. Metrics describe image-level facial expression pattern recognition; the visible Calm index is an experimental geometric index that operates independently.
           </p>
         </div>
 
