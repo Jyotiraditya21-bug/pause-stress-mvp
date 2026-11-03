@@ -99,28 +99,28 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
           {/* Things to keep in mind (Constraints & Guidelines) */}
           <div className="scan-guidelines-bar" aria-label="Scan guidelines">
             <div className="scan-guideline-item">
-              <span className="guideline-icon">💡</span>
+              <span className="guideline-icon"><Icon name="sun" size={20} /></span>
               <div>
                 <strong>Soft, even light</strong>
                 <span>Avoid harsh backlight</span>
               </div>
             </div>
             <div className="scan-guideline-item">
-              <span className="guideline-icon">😐</span>
+              <span className="guideline-icon"><Icon name="face" size={20} /></span>
               <div>
                 <strong>Neutral expression</strong>
                 <span>Relax face &amp; jaw</span>
               </div>
             </div>
             <div className="scan-guideline-item">
-              <span className="guideline-icon">🧘</span>
+              <span className="guideline-icon"><Icon name="steady" size={20} /></span>
               <div>
                 <strong>Hold steady</strong>
                 <span>Small movements are fine</span>
               </div>
             </div>
             <div className="scan-guideline-item">
-              <span className="guideline-icon">👤</span>
+              <span className="guideline-icon"><Icon name="center" size={20} /></span>
               <div>
                 <strong>Face centered</strong>
                 <span>Look at screen naturally</span>

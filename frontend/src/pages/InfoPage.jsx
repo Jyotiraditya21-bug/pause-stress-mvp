@@ -158,11 +158,13 @@ export function AboutPage(){
           {/* Automated Tests & Integrity Badges */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:'10px',marginTop:'12px',marginBottom:'16px'}}>
             <div style={{background:'var(--paper)',border:'1px solid var(--line)',borderRadius:'12px',padding:'10px 14px',display:'flex',alignItems:'center',gap:'12px'}}>
-              <span style={{fontSize:'22px'}}>🧪</span>
+              <span style={{width:'32px',height:'32px',borderRadius:'50%',background:'var(--tide-soft)',color:'var(--tide)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <Icon name="flask" size={18}/>
+              </span>
               <div>
                 <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
                   <strong>90 Automated Tests</strong>
-                  <span className="metric-verified-tag">✓ 100% Pass</span>
+                  <span className="metric-verified-tag"><Icon name="check" size={12}/> 100% Pass</span>
                 </div>
                 <span className="pz-fineprint" style={{display:'block',fontSize:'11px',textAlign:'left'}}>
                   66 deterministic unit tests + 24 Playwright browser E2E specs in CI.
@@ -171,11 +173,13 @@ export function AboutPage(){
             </div>
 
             <div style={{background:'var(--paper)',border:'1px solid var(--line)',borderRadius:'12px',padding:'10px 14px',display:'flex',alignItems:'center',gap:'12px'}}>
-              <span style={{fontSize:'22px'}}>🔒</span>
+              <span style={{width:'32px',height:'32px',borderRadius:'50%',background:'var(--tide-soft)',color:'var(--tide)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <Icon name="lock" size={18}/>
+              </span>
               <div>
                 <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
                   <strong>12 Frozen Assets</strong>
-                  <span className="metric-verified-tag">✓ SHA-256</span>
+                  <span className="metric-verified-tag"><Icon name="check" size={12}/> SHA-256</span>
                 </div>
                 <span className="pz-fineprint" style={{display:'block',fontSize:'11px',textAlign:'left'}}>
                   WASM &amp; model binaries cryptographically verified before each build.
@@ -189,7 +193,7 @@ export function AboutPage(){
             <h3 style={{margin:'0 0 10px 0',fontSize:'15px'}}>Tested &amp; Proven Engineering Capabilities</h3>
             <ul style={{listStyle:'none',padding:0,margin:0,display:'grid',gap:'10px'}}>
               <li style={{display:'flex',alignItems:'flex-start',gap:'10px'}}>
-                <span style={{color:'var(--tide)',fontSize:'16px'}}>✓</span>
+                <span style={{color:'var(--tide)',display:'inline-flex',alignItems:'center',marginTop:'2px'}}><Icon name="check" size={16}/></span>
                 <div>
                   <strong>Deterministic On-Device Calculation:</strong>
                   <p className="pz-fineprint" style={{margin:'2px 0 0',textAlign:'left'}}>
@@ -198,7 +202,7 @@ export function AboutPage(){
                 </div>
               </li>
               <li style={{display:'flex',alignItems:'flex-start',gap:'10px'}}>
-                <span style={{color:'var(--tide)',fontSize:'16px'}}>✓</span>
+                <span style={{color:'var(--tide)',display:'inline-flex',alignItems:'center',marginTop:'2px'}}><Icon name="check" size={16}/></span>
                 <div>
                   <strong>100% Private Camera Boundary:</strong>
                   <p className="pz-fineprint" style={{margin:'2px 0 0',textAlign:'left'}}>
@@ -207,7 +211,7 @@ export function AboutPage(){
                 </div>
               </li>
               <li style={{display:'flex',alignItems:'flex-start',gap:'10px'}}>
-                <span style={{color:'var(--tide)',fontSize:'16px'}}>✓</span>
+                <span style={{color:'var(--tide)',display:'inline-flex',alignItems:'center',marginTop:'2px'}}><Icon name="check" size={16}/></span>
                 <div>
                   <strong>Movement &amp; Pose Tolerance:</strong>
                   <p className="pz-fineprint" style={{margin:'2px 0 0',textAlign:'left'}}>
@@ -216,7 +220,7 @@ export function AboutPage(){
                 </div>
               </li>
               <li style={{display:'flex',alignItems:'flex-start',gap:'10px'}}>
-                <span style={{color:'var(--tide)',fontSize:'16px'}}>✓</span>
+                <span style={{color:'var(--tide)',display:'inline-flex',alignItems:'center',marginTop:'2px'}}><Icon name="check" size={16}/></span>
                 <div>
                   <strong>Zero Fabricated Scores:</strong>
                   <p className="pz-fineprint" style={{margin:'2px 0 0',textAlign:'left'}}>

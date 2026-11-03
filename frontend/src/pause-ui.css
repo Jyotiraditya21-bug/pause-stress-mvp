@@ -182,7 +182,14 @@ button:active:not(:disabled) { transform: translateY(1px); }
   text-align: left;
 }
 .scan-guideline-item .guideline-icon {
-  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--tide-soft);
+  color: var(--tide);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 .scan-guideline-item strong {
