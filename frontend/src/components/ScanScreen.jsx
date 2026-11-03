@@ -147,12 +147,11 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
         <h1>{title}</h1>
         <p className="scan-intro">{calibrating?'A familiar reference. A more personal check-in. Take a moment when you feel calm.':'Take a breath. Find your light. Give yourself a moment to pause.'}</p>
         <p className="scan-description">{calibrating?'This optional scan helps future results compare with your own calm face.':'A short 10-second camera check-in gives you an experimental facial index based on facial geometry. No wearables or questions. Video stays on your device.'}</p>
-        <ol className="scan-guide">
-          <li><span className="guide-icon guide-peach"><Icon name="sun"/></span><div><strong>Find a comfortable spot</strong><p>Sit facing soft, even light.</p></div></li>
-          <li><span className="guide-icon guide-mint"><Icon name="scan"/></span><div><strong>Bring your face into view</strong><p>Look naturally toward the camera.</p></div></li>
-          <li><span className="guide-icon guide-lilac"><Icon name="spark"/></span><div><strong>See your check-in</strong><p>Your Calm index opens when the scan finishes.</p></div></li>
-        </ol>
-        <div className="privacy-note"><Icon name="shield"/><p><strong>Your space stays yours.</strong><br/>Video stays on your device.</p></div>
+        <ul className="scan-features" aria-label="Features">
+          <li><Icon name="scan" size={15}/>Short 10-second camera check-in</li>
+          <li><Icon name="spark" size={15}/>Honest index &amp; scan graph</li>
+          <li><Icon name="shield" size={15}/>100% private on your device</li>
+        </ul>
       </div>
 
       <section className={`scan-card ${active?'scan-card-active':''} ${isError?'scan-card-error':''}`} aria-label="Camera scan">
@@ -243,68 +242,45 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
         )}
       </section>
 
-      <section className="scan-about" aria-label="About Pause">
-        <ul className="scan-features" aria-label="Features">
-          <li><Icon name="scan" size={16}/>Short 10-second camera check-in</li>
-          <li><Icon name="spark" size={16}/>Honest index &amp; scan graph</li>
-          <li><Icon name="shield" size={16}/>100% private on your device</li>
-        </ul>
-
-        {/* Model Performance & Accuracy Milestones */}
-        <div className="pz-panel" style={{ maxWidth: '680px', margin: '24px auto 0', textAlign: 'left', padding: '18px 20px', borderRadius: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>Model Benchmark &amp; Discrimination Milestones</h3>
-            <span className="pz-chip" style={{ background: 'var(--tide-soft)', color: 'var(--ink)', padding: '3px 8px', fontSize: '11px' }}>
+      <section className="scan-milestones-area" aria-label="About Pause and Benchmarks">
+        <div className="pz-panel model-benchmark-card">
+          <div className="model-benchmark-header">
+            <h2 className="model-benchmark-title">Model Benchmark &amp; Discrimination Milestones</h2>
+            <span className="pz-chip model-benchmark-chip">
               <i aria-hidden="true" style={{ background: 'var(--tide)' }} />Verified Benchmark
             </span>
           </div>
-          <p className="pz-fineprint" style={{ margin: '6px 0 14px', fontSize: '12px' }}>
+          <p className="pz-fineprint model-benchmark-desc">
             Empirical neural classifier gains evaluated across 1,344 holdout test videos compared to initial baseline:
           </p>
 
-          <div className="metric-badge-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-            <div className="metric-card" style={{ padding: '12px' }}>
-              <span className="pz-fineprint" style={{ fontSize: '11px' }}>ROC-AUC Score</span>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--tide)', marginTop: '2px' }}>
-                0.906
-              </div>
-              <span className="pz-fineprint" style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '2px', display: 'block' }}>
-                +0.406 vs chance (0.50)
-              </span>
+          <div className="metric-badge-grid model-benchmark-grid">
+            <div className="metric-card">
+              <span className="pz-fineprint">ROC-AUC Score</span>
+              <div className="metric-number">0.906</div>
+              <span className="metric-sub">+0.406 vs chance (0.50)</span>
             </div>
 
-            <div className="metric-card" style={{ padding: '12px' }}>
-              <span className="pz-fineprint" style={{ fontSize: '11px' }}>Test Accuracy</span>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--tide)', marginTop: '2px' }}>
-                79.4%
-              </div>
-              <span className="pz-fineprint" style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '2px', display: 'block' }}>
-                +28.1% vs epoch 1 (51.3%)
-              </span>
+            <div className="metric-card">
+              <span className="pz-fineprint">Test Accuracy</span>
+              <div className="metric-number">79.4%</div>
+              <span className="metric-sub">+28.1% vs epoch 1 (51.3%)</span>
             </div>
 
-            <div className="metric-card" style={{ padding: '12px' }}>
-              <span className="pz-fineprint" style={{ fontSize: '11px' }}>Validation Peak</span>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--tide)', marginTop: '2px' }}>
-                90.2%
-              </div>
-              <span className="pz-fineprint" style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '2px', display: 'block' }}>
-                Holdout unseen actors
-              </span>
+            <div className="metric-card">
+              <span className="pz-fineprint">Validation Peak</span>
+              <div className="metric-number">90.2%</div>
+              <span className="metric-sub">Holdout unseen actors</span>
             </div>
 
-            <div className="metric-card" style={{ padding: '12px' }}>
-              <span className="pz-fineprint" style={{ fontSize: '11px' }}>Client Latency</span>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--tide)', marginTop: '2px' }}>
-                &lt; 50 ms
-              </div>
-              <span className="pz-fineprint" style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '2px', display: 'block' }}>
-                100% on-device WebAssembly
-              </span>
+            <div className="metric-card">
+              <span className="pz-fineprint">Client Latency</span>
+              <div className="metric-number">&lt; 50 ms</div>
+              <span className="metric-sub">100% on-device WebAssembly</span>
             </div>
           </div>
 
-          <p className="pz-fineprint" style={{ margin: '12px 0 0', fontSize: '11px', color: 'var(--ink-soft)' }}>
+          <p className="pz-fineprint model-benchmark-footnote">
             * Evaluated on held-out test splits. Metrics describe image-level facial expression pattern recognition; the visible Calm index is an experimental geometric index that operates independently.
           </p>
         </div>
