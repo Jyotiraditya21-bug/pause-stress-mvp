@@ -1,8 +1,19 @@
 # MVP task tracker
 
-Last updated: 2026-11-02
+Last updated: 2026-11-03
 
-## Current scope and status — 2026-11-02: Trust & Polish Release Verification (`trust-and-polish`)
+## Current scope and status — 2026-11-03: Credibility Page & Empirical Metrics Alignment (`trust-and-polish`)
+
+- **Empirical Metric Alignment**: Corrected the benchmark card in `ScanScreen.jsx` to match our verified test audit in `PRODUCTION_READINESS.md`: ROC-AUC is `0.794` (+0.294 vs chance 0.50), Test Accuracy is `71.2%` (+20.9% vs chance 50.3%), and Validation Peak is `74.3%` balanced accuracy.
+- **Dedicated Credibility Page**: Created `frontend/src/pages/CredibilityPage.jsx` and `#credibility` route with 6 pillars of credibility:
+  1. *Scientific Honesty & Non-Diagnostic Framing*: No medical claims, separation of open math from neural models, open reporting of failures.
+  2. *100% On-Device Privacy Architecture*: WebAssembly SIMD execution, volatile memory, zero video or image uploads.
+  3. *Audited Benchmarks & Cryptographic Lineage*: 0.794 ROC-AUC / 71.2% test accuracy on 2,464 test images, 12 frozen SHA-256 asset checksums.
+  4. *Anti-Artifact Controls & Signal Quality Gates*: Exposure/glare validation, 3D pose alignment, speech articulation masking, zero fabricated scores.
+  5. *Personal Baseline Normalization*: Individual resting calm calibration (&mu;<sub>0</sub>, &sigma;<sub>0</sub>) over population stereotypes.
+  6. *Production Testing & Accessibility*: 90 automated tests (66 unit + 24 Playwright E2E), WCAG AA 100/100 Lighthouse accessibility.
+- **Navigation Integration**: Added `Credibility` to the primary segmented nav bar with touch scrolling and hash synchronization.
+- **Verification**: 66/66 unit tests passed, 24/24 Playwright E2E tests passed, zero horizontal overflow at 360px–1280px viewports. Production build succeeds with minimal bundle overhead.
 
 Completed the full Trust & Polish upgrade across Phases 0–6 on local branch `trust-and-polish`:
 - **Phase 0 (Baseline)**: Baseline metrics captured (60 unit tests, 24 E2E tests, Lighthouse >= 0.90 across all categories). Baseline reference screenshots (Desktop 1280px, Mobile 360px) archived to `/tmp/before/`.
