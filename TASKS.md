@@ -587,3 +587,17 @@ This audit supersedes the unqualified historical claims above that all training/
 - Existing experimental wording, unknown provenance and separate geometric results remain explicit. No model weights, preprocessing or scoring formula changes.
 
 - Verification: 60 unit tests, production build and five targeted Chromium checks passed (default/persistence, enabled/disabled runtime loading and delayed-model camera preview). Production deployment is gated on the full CI and live smoke suites.
+
+## QA/UX audit follow-up — 2026-11-12
+
+- [x] Map the deployed public Pages screens, navigation, optional study mode, data flow, and responsive breakpoints; no live camera scan or user data was touched.
+- [x] Reproduce browser Back/Forward escape twice on production, unbounded guided-study pseudonym twice on production using unsaved QA-TEST text, ambiguous study duration twice on production, and immediate local-history deletion twice in isolated synthetic browser tests.
+- [x] Create `QA_AUDIT_2026-11-12.md` with the app map, design system, score flow, state/data, metrics caveats, accessibility/performance review, findings, fixes and open questions.
+- [x] Prepare fixes on branch `qa-audit-2026-11-12`: browser history/hash navigation, 64-character pseudonym limit/help, and delete confirmation; add corresponding regression tests.
+- [x] Add a smoke test for public screens that captures console/page errors and failed/4xx assets; it passed once on Chromium.
+- [x] Add clearer duration copy for prospective study mode: distinguish 10-second capture from the 25-second combined positioning/capture limit; a regression test was added.
+- [x] Verify final production build/frozen assets; 63 frontend unit tests; Chromium E2E (32 passed, 1 intentionally skipped); WebKit readiness (13 passed); offline PWA (1 passed); Lighthouse (0.96 performance, 1.00 accessibility/best-practices/SEO).
+- [x] Final `QA_AUDIT_2026-11-12.md` includes four reproduced findings, code excerpts, responsive/accessibility/performance evidence, fixes, limitations, and open questions.
+- [x] Commit and push feature branch `qa-audit-2026-11-12` (commit `079af6a`); `main` and deployment remain unchanged.
+- [ ] Open review PR. GitHub integration returned HTTP 403 (`Resource not accessible by integration`) and the local `gh` token is invalid. Compare link: https://github.com/Jyotiraditya21-bug/pause-stress-mvp/compare/main...qa-audit-2026-11-12?expand=1
+- [ ] Real-camera Safari/mobile compatibility and product accuracy/repeatability are not established by this UI audit.

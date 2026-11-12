@@ -1,6 +1,7 @@
 import React from 'react';
 import CameraScan, { preloadLandmarker } from '../CameraScan.jsx';
 import Icon from './Icon.jsx';
+import {SCAN_SECONDS} from '../liveIndex.js';
 
 function getRecoveryAction(errorMessage) {
   if (!errorMessage) return '';
@@ -50,9 +51,9 @@ export default function ScanScreen({onComplete,baseline,calibrating=false,mlEnab
       <section className={`scan-card ${active?'scan-card-active':''} ${isError?'scan-card-error':''}`} aria-label="Camera scan">
         <div className="scan-card-heading">
           <span><Icon name="scan"/> {calibrating?'Personal baseline':'Your daily pause'}</span>
-          <span className="duration-pill">{hardCap} sec</span>
+          <span className="duration-pill">{hardCap===SCAN_SECONDS?`${SCAN_SECONDS} sec capture`:`Up to ${hardCap} sec total`}</span>
         </div>
-        <p className="scan-mode-note">{tolerant?'Experimental 10-second movement-tolerant capture. Small movements are handled when enough windows agree.':'10-second capture after positioning. Setup may take longer.'}</p>
+        <p className="scan-mode-note">{tolerant?`Experimental ${SCAN_SECONDS}-second movement-tolerant capture. Small movements are handled when enough windows agree.`:hardCap>SCAN_SECONDS?`${SCAN_SECONDS}-second capture after positioning. Positioning and capture share a ${hardCap}-second limit once the camera is ready.`:`${SCAN_SECONDS}-second capture after the camera is ready.`}</p>
 
         {isError ? (
           <div className="scan-error-view" role="alert">

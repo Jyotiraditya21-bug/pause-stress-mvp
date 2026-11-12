@@ -56,6 +56,9 @@ test('result can be saved, viewed accessibly, and deleted from History',async({p
   await expect(page.getByLabel(/Calm index 6.2 out of 10/)).toBeVisible();await expectAccessible(page);
   await page.getByRole('button',{name:'Save this result'}).click();await page.getByRole('button',{name:'History'}).click();
   await expect(page.getByText('6.2 /10')).toBeVisible();await expectAccessible(page);
+  page.once('dialog',async dialog=>{expect(dialog.message()).toContain('cannot be undone');await dialog.dismiss();});
+  await page.getByRole('button',{name:/Delete scan/}).click();await expect(page.getByText('6.2 /10')).toBeVisible();
+  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:/Delete scan/}).click();await expect(page.getByText(/No saved scans yet/)).toBeVisible();
 });
 
@@ -65,7 +68,7 @@ test('personal baseline can be reset',async({page})=>{
   await expect(page.getByText('Your calm baseline was reset.')).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('pause.baseline.v1'))).toBeNull();
 });
 
-for(const viewport of [{width:360,height:640},{width:390,height:844},{width:768,height:1024},{width:1280,height:800}]){
+for(const viewport of [{width:360,height:640},{width:375,height:812},{width:390,height:844},{width:768,height:1024},{width:1280,height:800},{width:1440,height:900}]){
   test(`scan has no horizontal overflow at ${viewport.width}x${viewport.height}`,async({page})=>{
     await onboard(page);await page.setViewportSize(viewport);await page.goto('/');
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();

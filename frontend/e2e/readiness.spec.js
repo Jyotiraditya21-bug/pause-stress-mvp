@@ -1,5 +1,51 @@
 import {test,expect} from '@playwright/test';
 
+test('primary navigation supports Back, Forward and refresh',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
+  await page.goto('/');
+  await page.getByRole('navigation',{name:'Primary'}).getByRole('button',{name:'Evidence'}).click();
+  await expect(page).toHaveURL(/#evidence$/);
+  await expect(page.getByRole('heading',{name:'Evidence & metrics'})).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading',{name:'Your Calm index'})).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole('heading',{name:'Evidence & metrics'})).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Evidence & metrics'})).toBeVisible();
+});
+
+test('public screens load without browser errors or failed assets',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
+  const errors=[];
+  page.on('pageerror',error=>errors.push(`page: ${error.message}`));
+  page.on('console',message=>{if(message.type()==='error')errors.push(`console: ${message.text()}`);});
+  page.on('response',response=>{if(response.status()>=400)errors.push(`${response.status()}: ${response.url()}`);});
+  page.on('requestfailed',request=>errors.push(`failed: ${request.url()}`));
+  await page.goto('/');
+  const nav=page.getByRole('navigation',{name:'Primary'});
+  for(const name of ['History','Credibility','Evidence','Settings','Privacy']){
+    await nav.getByRole('button',{name,exact:true}).click();
+    await expect(page.locator('main h1')).toBeVisible();
+  }
+  await page.getByRole('button',{name:'About this index'}).click();
+  await expect(page.getByRole('heading',{name:'About this index'})).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('guided-study pseudonym is required and length-limited without saving',async({page})=>{
+  await page.goto('/?study=1&policy=prospective-1');
+  const input=page.getByLabel('Participant pseudonym');
+  const begin=page.getByRole('button',{name:'Begin new pair and save derived outcomes locally'});
+  await input.fill('');await expect(begin).toBeDisabled();
+  const longValue='QA-TEST-'+ 'x'.repeat(100);
+  await input.fill(longValue);
+  await expect(input).toHaveAttribute('maxlength','64');
+  await expect(input).toHaveValue(longValue.slice(0,64));
+  await expect(begin).toBeEnabled();
+  expect(await page.evaluate(()=>localStorage.getItem('pause.prospective-study.v1'))).toBeNull();
+});
+
 test('ordinary navigation exits calibration without starting the camera',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
   await page.goto('/');await page.getByRole('button',{name:'Settings',exact:true}).click();
@@ -26,6 +72,7 @@ test('damaged history is recoverable without losing valid records',async({page})
   expect(await page.evaluate(()=>Object.keys(localStorage).some(k=>k.startsWith('pause-camera-sessions-v2.recovery.')))).toBeFalsy();
   await page.getByRole('button',{name:'History',exact:true}).click();
   await expect(page.getByText('5.0 /10')).toBeVisible();
+  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button',{name:/Delete scan/}).click();
   await expect(page.getByText('No saved scans yet.',{exact:false})).toBeVisible();
 });
@@ -34,7 +81,14 @@ test('experimental movement-tolerant fixed duration is visible before permission
   await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
   await page.goto('/?tolerance=1');
   await expect(page.getByText(/Experimental 10-second movement-tolerant capture/)).toBeVisible();
-  await expect(page.getByText('10 sec',{exact:true})).toBeVisible();
+  await expect(page.getByText('10 sec capture',{exact:true})).toBeVisible();
+});
+
+test('prospective study clearly distinguishes capture duration from its overall attempt limit',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
+  await page.goto('/?study=1&policy=prospective-1');
+  await expect(page.getByText('Up to 25 sec total',{exact:true})).toBeVisible();
+  await expect(page.getByText(/10-second capture after positioning.*25-second limit/)).toBeVisible();
 });
 
 for(const viewport of [{width:390,height:844},{width:360,height:640}]){

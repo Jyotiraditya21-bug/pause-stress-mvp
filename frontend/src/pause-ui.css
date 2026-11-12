@@ -288,6 +288,7 @@ button:active:not(:disabled) { transform: translateY(1px); }
 /* Research controls share the production form language without changing scan layout. */
 .guided-study { padding: 26px; border-radius: 24px; }
 .guided-study label { display: inline-flex; flex-direction: column; gap: 8px; margin: 10px 18px 12px 0; font-weight: 600; }
+.guided-study .study-field-help { margin: -5px 0 12px; color: var(--ink-soft); font-size: 12px; }
 .guided-study input,.guided-study select { min-height: 44px; padding: 10px 14px; border: 1px solid #cbd8c9; border-radius: 12px; background: #fff; color: #25493d; font: inherit; max-width: 100%; }
 .guided-study button { white-space: normal; }
 .history-trend { animation: enter .5s ease both; }

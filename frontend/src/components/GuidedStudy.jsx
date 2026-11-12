@@ -25,7 +25,8 @@ export default function GuidedStudy({result,onStart}){
     <h2>Guided local study · unvalidated candidate</h2>
     <p>Beginning a pair consents to saving derived scores, quality measurements, task labels and failed attempts in this browser. No video, images or landmarks are saved or uploaded. Each participant must consent. Keep the camera, lighting and expression consistent.</p>
     {state.error&&<p role="alert">{state.error}</p>}
-    <label>Participant pseudonym <input value={subject} onChange={e=>setSubject(e.target.value)}/></label>{' '}
+    <label>Participant pseudonym <input value={subject} maxLength={64} autoComplete="off" aria-describedby="study-pseudonym-help" onChange={e=>setSubject(e.target.value)}/></label>{' '}
+    <p id="study-pseudonym-help" className="study-field-help">Use a short code such as QA-TEST; avoid names. Maximum 64 characters.</p>
     <label>Task <select value={condition} onChange={e=>setCondition(e.target.value)}><option value="rest">Rest</option><option value="speech">Neutral speech</option><option value="arithmetic">Arithmetic</option></select></label>
     <p><button className="pz-btn pz-btn-quiet" disabled={!!state.error||!subject.trim()} onClick={begin}>Begin new pair and save derived outcomes locally</button></p>
     {current&&<><p>Active pair: {current.subject_id} · {current.condition}. Completed attempts: {current.records.length} (target: 2). Every completed attempt counts, including failures.</p>

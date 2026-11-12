@@ -18,6 +18,14 @@ const AboutPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.Abou
 const EvidencePage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.EvidencePage})));
 const CredibilityPage=lazy(()=>import('./pages/InfoPage.jsx').then(m=>({default:m.CredibilityPage})));
 const ONBOARDING_KEY='pause.onboarded.v1';
+const SCREEN_HASH={Onboarding:'welcome',Scan:'scan',History:'history',Credibility:'credibility',Evidence:'evidence',Settings:'settings',Privacy:'privacy',About:'about',Lab:'lab',Result:'result'};
+const HASH_SCREEN=Object.fromEntries(Object.entries(SCREEN_HASH).map(([screen,hash])=>[hash,screen]));
+
+function screenFromHash(lab){
+  const screen=HASH_SCREEN[location.hash.slice(1).toLowerCase()];
+  if(screen==='Lab'&&!lab||screen==='Result')return null;
+  return screen||null;
+}
 
 function wasOnboarded(){try{return localStorage.getItem(ONBOARDING_KEY)==='1'}catch{return false}}
 function setOnboarded(){try{localStorage.setItem(ONBOARDING_KEY,'1')}catch{}}
@@ -45,8 +53,8 @@ function ResultScreen({result,isSaved,onRetry,onDone,onSave,onCalibrate,baseline
 
 function App(){
   const lab=new URLSearchParams(location.search).get('lab')==='1';
-  const fixture=import.meta.env.DEV&&new URLSearchParams(location.search).get('fixture')==='result'?{id:'e2e-result',created_at:'2026-01-01T00:00:00.000Z',average:6.2,status:'ok',quality:'good',mode:'generic',algoVersion:'quick-2.0',range:[5.8,6.6],windowScores:[6,6.1,6.2,6.3,6.2,6.1,6.2,6.3,6.4],coveragePercent:100,qualityFlags:{}}:null;
-  const [screen,setScreen]=useState(()=>fixture?'Result':wasOnboarded()?'Scan':'Onboarding');
+  const fixture=import.meta.env.DEV&&new URLSearchParams(location.search).get('fixture')==='result'?{id:'QA-TEST-e2e-result',created_at:'2026-01-01T00:00:00.000Z',average:6.2,status:'ok',quality:'good',mode:'generic',algoVersion:'quick-2.0',range:[5.8,6.6],windowScores:[6,6.1,6.2,6.3,6.2,6.1,6.2,6.3,6.4],coveragePercent:100,qualityFlags:{}}:null;
+  const [screen,setScreen]=useState(()=>fixture?'Result':screenFromHash(lab)||(wasOnboarded()?'Scan':'Onboarding'));
   const [result,setResult]=useState(fixture),[calibrating,setCalibrating]=useState(false);
   const [baseline,setBaselineState]=useState(()=>readBaseline());
   const [mlEnabled,setMlEnabled]=useState(()=>{try{return localStorage.getItem('pause.ml.enabled')!=='0'}catch{return true}});
@@ -57,7 +65,21 @@ function App(){
   useEffect(()=>{
     initializeMonitoring().catch(()=>{});registerSW({immediate:false});
   },[]);
-  const navigate=(next,{calibration=false}={})=>{setCalibrating(calibration);if(next==='Scan')setBaselineState(readBaseline());setScreen(next);setNotice('');setError('')};
+  const navigate=(next,{calibration=false}={})=>{
+    const hash=SCREEN_HASH[next];
+    if(hash&&(next!==screen||calibration!==calibrating))window.history.pushState({...window.history.state,pauseScreen:next,pauseCalibration:calibration},'',`${location.pathname}${location.search}#${hash}`);
+    setCalibrating(calibration);if(next==='Scan')setBaselineState(readBaseline());setScreen(next);setNotice('');setError('');window.scrollTo(0,0);
+  };
+  useEffect(()=>{
+    const restore=()=>{
+      let next=window.history.state?.pauseScreen||screenFromHash(lab)||(wasOnboarded()?'Scan':'Onboarding');
+      if(next==='Lab'&&!lab||next==='Result'&&!result)next=wasOnboarded()?'Scan':'Onboarding';
+      setCalibrating(next==='Scan'&&window.history.state?.pauseCalibration===true);
+      if(next==='Scan')setBaselineState(readBaseline());
+      setScreen(next);setNotice('');setError('');window.scrollTo(0,0);
+    };
+    window.addEventListener('popstate',restore);return()=>window.removeEventListener('popstate',restore);
+  },[lab,result]);
   function complete(session){
     const completeBaseline=['brow_furrow','lip_press','lip_corner','jaw_clench'].every(k=>Number.isFinite(session.featureStats?.[k]?.median)&&Number.isFinite(session.featureStats?.[k]?.mad));
     if(calibrating&&session.status!=='failed'&&completeBaseline){
@@ -65,7 +87,7 @@ function App(){
       setNotice(saved?'Your calm baseline is active.':'The baseline could not be saved in this browser.');
     }
     else if(calibrating){session.mode='generic';setNotice('No new baseline was saved. Calibrate with your mouth relaxed and your face toward the camera.');}
-    setResult(session);setCalibrating(false);setScreen('Result');
+    setResult(session);setCalibrating(false);navigate('Result');
   }
   function startCalibration(){setResult(null);navigate('Scan',{calibration:true})}
   function recoverHistory(){try{repairCameraSessions();setSessions(readCameraSessions());setStorageState(readCameraSessionState());setNotice('History recovered. Valid scans were kept and the original data was backed up in this browser.');setError('')}catch{setError('Recovery could not create a backup. Free some browser storage and try again. Your original data was kept.')}}
