@@ -101,6 +101,17 @@ for(const viewport of [{width:390,height:844},{width:360,height:640}]){
   });
 }
 
+test('mobile navigation shows and dismisses a scroll cue',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
+  await page.setViewportSize({width:375,height:812});await page.goto('/');
+  const nav=page.getByRole('navigation',{name:'Primary'});
+  expect(await nav.evaluate(node=>node.scrollWidth>node.clientWidth)).toBeTruthy();
+  await expect(page.getByText('Scroll for more →')).toBeVisible();
+  await nav.evaluate(node=>{node.scrollLeft=node.scrollWidth;node.dispatchEvent(new Event('scroll'));});
+  await expect(page.getByText('Scroll for more →')).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
+
 test('trends do not join different baselines and use elapsed date spacing',async({page})=>{
   await page.addInitScript(()=>{
     localStorage.setItem('pause.onboarded.v1','1');
@@ -138,6 +149,7 @@ test('neural model defaults on and its off/on preference survives reloads',async
   await page.reload();await page.getByRole('button',{name:'Settings',exact:true}).click();
   await expect(toggle).toBeChecked();
 });
+
 
 test('previously saved neural off preference is respected',async({page})=>{
   await page.addInitScript(()=>{localStorage.setItem('pause.onboarded.v1','1');localStorage.setItem('pause.ml.enabled','0');});

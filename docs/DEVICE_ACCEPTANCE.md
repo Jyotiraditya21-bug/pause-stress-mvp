@@ -8,6 +8,6 @@ Automation does not substitute for physical camera testing. Owner: @Jyotiraditya
 | Physical iPhone / Android | Not verified | Portrait/landscape, small screen, interruption, return from lock, front camera orientation, successful/poor-light scans. |
 | Startup / processing | Not verified on representative hardware | Cold and warm cache, record click-to-permission and grant-to-first-frame separately; model-ready delay separately. Five runs per device; record medians/ranges. |
 | Memory / battery | Not verified | Ten consecutive scans; profile memory after cleanup and record device battery/thermal observations over a fixed 15-minute workload, with idle comparison. |
-| Offline / cache update | Automated Chromium only | Online first load, wait for service worker cache, go offline, reload and scan. Test new release activation with an existing old tab. Optional neural assets may be unavailable offline. |
+| Offline / cache update | Automated Chromium only | Online first load, wait for the service worker, warm MediaPipe once, then go offline, reload and scan. MediaPipe assets are cached on first use; optional neural model and ONNX runtime assets are cached only after first enabled use and may be unavailable offline before that. Test new release activation with an existing old tab. |
 
 Acceptance: no crash, stuck camera, invented score, or inaccessible recovery. Record unsupported conditions explicitly. Browser permission and hardware startup cannot be guaranteed instantaneous. No clinical or psychological validity is inferred from any row.

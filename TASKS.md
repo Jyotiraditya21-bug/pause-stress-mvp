@@ -598,6 +598,13 @@ This audit supersedes the unqualified historical claims above that all training/
 - [x] Add clearer duration copy for prospective study mode: distinguish 10-second capture from the 25-second combined positioning/capture limit; a regression test was added.
 - [x] Verify final production build/frozen assets; 63 frontend unit tests; Chromium E2E (32 passed, 1 intentionally skipped); WebKit readiness (13 passed); offline PWA (1 passed); Lighthouse (0.96 performance, 1.00 accessibility/best-practices/SEO).
 - [x] Final `QA_AUDIT_2026-11-12.md` includes four reproduced findings, code excerpts, responsive/accessibility/performance evidence, fixes, limitations, and open questions.
+
+## Local-first improvement pass — 2026-11-12
+- [x] Add a small-screen navigation scroll cue that appears only while more links are available and disappears at the end of the row.
+- [x] Keep the previously requested neural-model-on default; clarify that large model files load at first enabled scan rather than at initial page load, and preserve the user's saved opt-out.
+- [x] Reduce the PWA precache by moving MediaPipe and optional ONNX/model assets into separate runtime caches with one-year expiry and bounded entry counts.
+- [x] Update the automated offline check to warm MediaPipe online before testing offline startup, and document that first-use requirement.
+- [ ] Verify on physical Safari/iOS and Android hardware; automated desktop browsers cannot verify camera drivers, orientation, thermal behavior, or real capture quality.
 - [x] Commit and push feature branch `qa-audit-2026-11-12` (commit `079af6a`); `main` and deployment remain unchanged.
 - [ ] Open review PR. GitHub integration returned HTTP 403 (`Resource not accessible by integration`) and the local `gh` token is invalid. Compare link: https://github.com/Jyotiraditya21-bug/pause-stress-mvp/compare/main...qa-audit-2026-11-12?expand=1
 - [ ] Real-camera Safari/mobile compatibility and product accuracy/repeatability are not established by this UI audit.

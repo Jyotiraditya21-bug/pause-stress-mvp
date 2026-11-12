@@ -8,12 +8,15 @@ export default defineConfig({
   esbuild:{jsx:'automatic'},
   plugins:[{name:'release-metadata',generateBundle(){let commit='local';try{commit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();}catch{}this.emitFile({type:'asset',fileName:'release.json',source:JSON.stringify({commit,algorithm:'quick-2.0',policy:'capture-clock-1',experimental:true})});}},VitePWA({
     registerType:'autoUpdate',
-    includeAssets:['favicon.svg','icons/*.png','mediapipe/**/*'],
+    includeAssets:['favicon.svg','icons/*.png'],
     manifest:{name:'Pause',short_name:'Pause',description:'A private, experimental 10-second Calm index.',display:'standalone',start_url:'.',theme_color:'#f8faf6',background_color:'#f8faf6',icons:[
       {src:'icons/pause-192.png',sizes:'192x192',type:'image/png'},
       {src:'icons/pause-512.png',sizes:'512x512',type:'image/png'},
       {src:'icons/pause-maskable-512.png',sizes:'512x512',type:'image/png',purpose:'maskable'}
     ]},
-    workbox:{globPatterns:['**/*.{js,css,html,svg,png,wasm,task,ttf}'],globIgnores:['**/onnx/**','**/*ort-wasm*.*','**/models/**'],maximumFileSizeToCacheInBytes:15*1024*1024,navigateFallback:'index.html'}
+    workbox:{globPatterns:['**/*.{js,css,html,svg,png,ttf}'],globIgnores:['**/mediapipe/**','**/onnx/**','**/*ort-wasm*.*','**/models/**'],maximumFileSizeToCacheInBytes:15*1024*1024,navigateFallback:'index.html',runtimeCaching:[
+      {urlPattern:({url})=>url.pathname.includes('/mediapipe/'),handler:'CacheFirst',options:{cacheName:'pause-mediapipe-v1',expiration:{maxEntries:12,maxAgeSeconds:31_536_000},cacheableResponse:{statuses:[0,200]}}},
+      {urlPattern:({url})=>url.pathname.includes('/models/')||url.pathname.includes('ort-wasm'),handler:'CacheFirst',options:{cacheName:'pause-optional-model-v1',expiration:{maxEntries:8,maxAgeSeconds:31_536_000},cacheableResponse:{statuses:[0,200]}}}
+    ]}
   })]
 });

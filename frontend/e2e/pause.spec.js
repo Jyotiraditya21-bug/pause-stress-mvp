@@ -105,7 +105,7 @@ test('restart after cancelling a pending model releases old streams',async({page
 for(const enabled of [true,false]){
   test(`scan loads neural runtime only when enabled (${enabled})`,async({page})=>{
     await onboard(page);
-    if(!enabled)await page.addInitScript(()=>localStorage.setItem('pause.ml.enabled','0'));
+    await page.addInitScript(value=>localStorage.setItem('pause.ml.enabled',value?'1':'0'),enabled);
     const neuralRequests=[];
     page.on('request',request=>{if(request.url().includes('/src/modelRunner.js'))neuralRequests.push(request.url());});
     await page.goto('/');await page.getByRole('button',{name:'Start 10-second scan'}).click();

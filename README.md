@@ -24,7 +24,7 @@ See the [release-readiness record](docs/RELEASE_READINESS.md) for implemented sa
 - Save selected results in this browser and review their trend.
 - Optionally calibrate when calm for a personal reference; reset it in Settings.
 
-The interface uses responsive layouts, accessible focus states, gentle motion, and a reduced-motion alternative. The PWA can initialize a scan offline after its app and model assets have been cached.
+The interface uses responsive layouts, accessible focus states, gentle motion, and a reduced-motion alternative. The PWA caches its lightweight app shell up front and caches MediaPipe on first use; optional neural model and ONNX runtime assets are cached only after first enabled use. An offline scan needs those assets to have been loaded once while online.
 
 The scan captures a fixed ten seconds after positioning. Its first second is settling time; the remaining nine one-second windows retain real missing intervals rather than holding or inventing observations. Camera/model setup takes additional time.
 

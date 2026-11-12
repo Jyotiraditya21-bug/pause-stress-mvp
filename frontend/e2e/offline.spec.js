@@ -5,6 +5,11 @@ test('installed PWA opens and initializes the scan offline after first load',asy
   await page.addInitScript(()=>localStorage.setItem('pause.onboarded.v1','1'));
   await page.goto('/');
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;if(!navigator.serviceWorker.controller)await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));});
+  await page.getByRole('button',{name:'Start 10-second scan'}).hover();
+  await expect.poll(()=>page.evaluate(async()=>{
+    const cache=await caches.open('pause-mediapipe-v1');const urls=(await cache.keys()).map(request=>request.url);
+    return urls.some(url=>url.endsWith('/face_landmarker.task'))&&urls.some(url=>url.endsWith('.wasm'));
+  }),{timeout:30000}).toBeTruthy();
   await context.setOffline(true);await page.reload();
   await expect(page.getByRole('heading',{name:'Your Calm index'})).toBeVisible();
   await page.getByRole('button',{name:'Start 10-second scan'}).click();
