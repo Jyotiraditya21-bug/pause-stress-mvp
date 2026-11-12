@@ -604,6 +604,7 @@ This audit supersedes the unqualified historical claims above that all training/
 - [x] Keep the previously requested neural-model-on default; clarify that large model files load at first enabled scan rather than at initial page load, and preserve the user's saved opt-out.
 - [x] Reduce the PWA precache by moving MediaPipe and optional ONNX/model assets into separate runtime caches with one-year expiry and bounded entry counts.
 - [x] Update the automated offline check to warm MediaPipe online before testing offline startup, and document that first-use requirement.
+- [x] Align post-deploy live smoke with History's confirmation dialog and first-use MediaPipe caching; the first live run exposed these stale test assumptions after the Pages deployment itself succeeded.
 - [ ] Verify on physical Safari/iOS and Android hardware; automated desktop browsers cannot verify camera drivers, orientation, thermal behavior, or real capture quality.
 - [x] Commit and push feature branch `qa-audit-2026-11-12` (commit `079af6a`); `main` and deployment remain unchanged.
 - [ ] Open review PR. GitHub integration returned HTTP 403 (`Resource not accessible by integration`) and the local `gh` token is invalid. Compare link: https://github.com/Jyotiraditya21-bug/pause-stress-mvp/compare/main...qa-audit-2026-11-12?expand=1
